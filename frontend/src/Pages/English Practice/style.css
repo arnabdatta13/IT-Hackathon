@@ -1,0 +1,16 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUpFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseSlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.03); }
+}
+
+.animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+.animate-slideUpFadeIn { animation: slideUpFadeIn 0.5s ease-out; }
+.animate-pulseSlow { animation: pulseSlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }

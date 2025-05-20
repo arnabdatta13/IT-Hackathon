@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- SVG Icons ---
+// --- SVG Icons (Kept as is, they are clean and functional) ---
 const ChatBubbleIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="currentColor"
-    className="w-5 h-5"
+    className="w-5 h-5" // Consider w-5 h-5 or w-6 h-6 consistently based on context
   >
     <path
       fillRule="evenodd"
@@ -52,7 +52,7 @@ const StopIcon = ({ className = "w-6 h-6" }) => (
     fill="currentColor"
     className={className}
   >
-    <path d="M7 7h10v10H7z" />
+    <path d="M7 7h10v10H7z" /> {/* Simple and clear */}
   </svg>
 );
 
@@ -63,6 +63,7 @@ const BotIcon = ({ className = "w-5 h-5" }) => (
     fill="currentColor"
     className={className}
   >
+    {/* A slightly more modern or abstract bot icon could be used, but this is recognizable */}
     <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z" />
     <path d="M12 7c-1.654 0-3 1.346-3 3s1.346 3 3 3 3-1.346 3-3-1.346-3-3-3zm0 4c-.551 0-1-.449-1-1s.449-1 1-1 1 .449 1 1-.449 1-1 1z" />
     <path d="M12 14c-2.757 0-5 2.243-5 5h10c0-2.757-2.243-5-5-5zm0 1c2.206 0 4 1.794 4 4H8c0-2.206 1.794-4 4-4z" />
@@ -132,9 +133,8 @@ const EngloTeacher = ({ user }) => {
             plan_model: user?.plan_model || "default",
           })
         );
-        // Add initial AI message
         addMessage(
-          "Hi there! I'm your English-speaking tutor. Let's have a fun conversation in English! To start, tell me: What did you do today? (আপনি আজ কী করলেন?) Try to answer in English, and I'll help you along the way!)",
+          "Hi there! I'm your English-speaking tutor. Let's have a fun conversation in English! To start, tell me: What did you do today? (আপনি আজ কী করলেন?) Try to answer in English, and I'll help you along the way!",
           "ai"
         );
       };
@@ -151,11 +151,18 @@ const EngloTeacher = ({ user }) => {
         if (ws.current) ws.current.close();
       };
     }
-  }, [sessionActive, user]); // Added user to dependency array
+  }, [sessionActive, user]);
 
   useEffect(() => {
-    conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Initialize AudioContext when component mounts
+    initAudioContext();
+    return () => {
+      // Cleanup AudioContext when component unmounts
+      if (audioContext.current) {
+        audioContext.current.close();
+      }
+    };
+  }, []);
 
   const handleTextMessage = (data) => {
     try {
@@ -163,9 +170,15 @@ const EngloTeacher = ({ user }) => {
       switch (msg.type) {
         case "output":
           addMessage(msg.output, "ai");
+          // Request audio for the AI message
+          if (ws.current?.readyState === WebSocket.OPEN) {
+            ws.current.send(JSON.stringify({ 
+              type: "request_audio",
+              text: msg.output
+            }));
+          }
           break;
         case "transcript":
-          // If we have a transcript, use it
           if (msg.transcript && msg.transcript.trim() !== "") {
             setMessages((prevMessages) =>
               prevMessages.map((m) => {
@@ -176,18 +189,14 @@ const EngloTeacher = ({ user }) => {
               })
             );
           } else {
-            // Handle empty or null transcript - remove the placeholder instead of showing error
             setMessages((prevMessages) => {
-              // Find if we have a placeholder
               const hasPlaceholder = prevMessages.some(
                 (m) => m.id === "user_recording_placeholder"
               );
-
               if (hasPlaceholder) {
-                // Instead of "[Transcription not available]", add a friendly user message
                 const updatedMessages = prevMessages.map((m) => {
                   if (m.id === "user_recording_placeholder") {
-                    return { ...m, text: "I spoke to you just now." };
+                    return { ...m, text: "I spoke to you just now." }; // User-friendly message for empty transcript
                   }
                   return m;
                 });
@@ -198,11 +207,11 @@ const EngloTeacher = ({ user }) => {
           }
           break;
         case "audio":
-          // Handle audio text message - this is just a signal, the actual audio comes as binary
           console.log("Received audio signal from server");
           break;
         case "coin_update":
           console.log("Coin update:", msg.coins);
+          // Potentially add a subtle toast/notification for coin updates
           break;
         case "conversation_history":
           navigate("/conversation-history");
@@ -221,21 +230,32 @@ const EngloTeacher = ({ user }) => {
         console.error("Received empty audio blob");
         return;
       }
+      
+      // Ensure AudioContext is initialized and running
       await initAudioContext();
-      if (!audioContext.current || audioContext.current.state !== "running") {
-        console.error("AudioContext not ready for playback.");
+      if (!audioContext.current) {
+        console.error("AudioContext not available");
         return;
       }
+      
+      // Resume AudioContext if suspended (needed for some browsers)
+      if (audioContext.current.state === "suspended") {
+        await audioContext.current.resume();
+      }
+
       const arrayBuffer = await audioBlob.arrayBuffer();
       if (arrayBuffer.byteLength === 0) {
         console.error("Empty array buffer from audioBlob.");
         return;
       }
-      const decodedData = await audioContext.current.decodeAudioData(
-        arrayBuffer
-      );
+
+      const decodedData = await audioContext.current.decodeAudioData(arrayBuffer);
       audioBufferQueue.current.push(decodedData);
-      if (!isAudioPlaying) playAudioQueue();
+      
+      // Start playing if not already playing
+      if (!isAudioPlaying) {
+        playAudioQueue();
+      }
     } catch (error) {
       console.error("Audio processing error:", error);
     }
@@ -253,14 +273,14 @@ const EngloTeacher = ({ user }) => {
     sourceNode.current.buffer = bufferToPlay;
     sourceNode.current.connect(audioContext.current.destination);
     sourceNode.current.onended = () => {
-      sourceNode.current = null; // Important to clear the ended source
-      playAudioQueue(); // Play next or set isAudioPlaying to false
+      sourceNode.current = null;
+      playAudioQueue();
     };
     sourceNode.current.start(0);
   };
 
   const startRecording = async () => {
-    if (isAudioPlaying) return; // Prevent recording while AI is speaking
+    if (isAudioPlaying) return;
     try {
       await initAudioContext();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -279,10 +299,9 @@ const EngloTeacher = ({ user }) => {
       mediaRecorder.current.start();
       setIsRecording(true);
 
-      // Atomically update messages: remove old placeholder and add new one
       const placeholderMessage = {
         id: "user_recording_placeholder",
-        text: "Listening...", // Changed to a more natural placeholder
+        text: "Listening intently...", // Slightly more engaging placeholder
         sender: "user",
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -298,10 +317,9 @@ const EngloTeacher = ({ user }) => {
       });
     } catch (err) {
       console.error("Recording failed:", err);
-      // Optionally, inform the user that recording failed to start
       addMessage(
-        "Could not access microphone. Please check permissions.",
-        "system"
+        "Could not access your microphone. Please check permissions and try again.",
+        "system" // "System" sender for errors/notifications
       );
     }
   };
@@ -311,7 +329,6 @@ const EngloTeacher = ({ user }) => {
       mediaRecorder.current.stop();
     }
     setIsRecording(false);
-    // The "Recording sent..." message is now a placeholder, updated by transcript
   };
 
   const addMessage = (text, sender, id = Date.now()) => {
@@ -324,37 +341,49 @@ const EngloTeacher = ({ user }) => {
         minute: "2-digit",
       }),
     };
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    // Add a slight delay for AI messages to simulate "typing" or processing, enhancing UX
+    if (sender === "ai") {
+      setTimeout(() => {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      }, 300); // Adjust delay as needed
+    } else {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    }
   };
 
   const handleSessionEnd = () => {
     if (ws.current)
       ws.current.send(JSON.stringify({ type: "end_conversation" }));
     setSessionActive(false);
-    setMessages([]); // Clear messages
-    navigate("/conversation-history");
+    setMessages([]);
+    navigate("/english");
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-2 font-sans bg-gradient-to-br from-slate-900 to-gray-900 sm:p-4">
-      <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl h-[95vh] sm:h-[90vh] bg-slate-800/70 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-700">
-        <header className="flex items-center justify-between flex-shrink-0 p-3 border-b sm:p-4 bg-slate-900/50 border-slate-700">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center justify-center text-white rounded-lg shadow-lg w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-blue-600 to-purple-700">
+    // UI Enhancement: Richer background gradient, slightly increased padding
+    <div className="flex justify-center items-center p-2 min-h-screen font-sans bg-gradient-to-br from-indigo-950 via-slate-900 to-neutral-950 sm:p-4">
+      {/* UI Enhancement: Increased backdrop blur, larger border radius for a softer, modern look */}
+      <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl h-[95vh] sm:h-[90vh] bg-slate-800/60 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-700/70">
+        {/* Header UI Enhancements: Softer bottom border, refined padding */}
+        <header className="flex items-center justify-between flex-shrink-0 p-3.5 border-b sm:p-4 bg-slate-900/60 border-slate-700/50">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* UI Enhancement: Slightly larger icon container, refined gradient */}
+            <div className="flex justify-center items-center w-10 h-10 text-white bg-gradient-to-tr from-sky-500 to-fuchsia-600 rounded-lg shadow-lg sm:w-11 sm:h-11">
               <ChatBubbleIcon />
             </div>
             <div>
-              <h1 className="font-semibold text-white text-md sm:text-lg">
+              {/* UI Enhancement: Gradient text for title, slightly increased size and tracking */}
+              <h1 className="text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-fuchsia-500 sm:text-xl">
                 EngloTeacher
               </h1>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs tracking-wide text-slate-400">
                 AI Powered English Speaking Partner
               </p>
             </div>
           </div>
         </header>
 
-        <main className="flex flex-col flex-grow overflow-hidden">
+        <main className="flex overflow-hidden flex-col flex-grow">
           {!sessionActive ? (
             <StartScreen
               onStart={() => {
@@ -384,21 +413,26 @@ const EngloTeacher = ({ user }) => {
 };
 
 const StartScreen = ({ onStart }) => (
-  <div className="flex flex-col items-center justify-center flex-grow p-6 text-center sm:p-8 animate-fadeIn">
-    <div className="flex items-center justify-center mb-6 rounded-full shadow-xl w-28 h-28 sm:w-32 sm:h-32 sm:mb-8 bg-gradient-to-br from-blue-500 to-purple-600 ring-4 ring-purple-500/30">
-      <MicrophoneIcon className="text-white w-14 h-14 sm:w-16 sm:h-16" />
+  // UI Enhancement: Added 'animate-slideUpFadeIn' for a smoother entry
+  <div className="flex flex-col flex-grow justify-center items-center p-6 text-center sm:p-8 animate-slideUpFadeIn">
+    {/* UI Enhancement: Slightly larger icon, added subtle pulse animation to the ring for more visual engagement */}
+    <div className="flex justify-center items-center mb-6 w-28 h-28 bg-gradient-to-br from-sky-500 to-purple-600 rounded-full ring-4 shadow-xl sm:w-32 sm:h-32 sm:mb-8 ring-purple-500/30 animate-pulseSlow">
+      <MicrophoneIcon className="w-14 h-14 text-white sm:w-16 sm:h-16" />
     </div>
-    <h1 className="mb-3 text-2xl font-bold text-white sm:text-3xl sm:mb-4">
+    {/* UI Enhancement: Bolder title, increased size and tracking */}
+    <h1 className="mb-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl sm:mb-4">
       Improve Your English Speaking
     </h1>
-    <p className="max-w-xs mb-6 text-sm sm:mb-8 text-slate-300 sm:max-w-md sm:text-base">
+    {/* UI Enhancement: Improved line height for paragraph readability */}
+    <p className="mb-6 max-w-xs text-sm leading-relaxed sm:mb-8 text-slate-300 sm:max-w-md sm:text-base">
       Practice conversational English with our AI-powered speaking assistant.
       Get real-time feedback on pronunciation, grammar, and vocabulary. Ready to
       begin?
     </p>
+    {/* UI Enhancement: Slightly larger button, refined shadow, stronger hover effect */}
     <button
       onClick={onStart}
-      className="px-6 py-3 sm:px-8 sm:py-3.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-50"
+      className="px-8 py-3.5 sm:px-10 sm:py-4 rounded-full bg-gradient-to-r from-sky-500 to-purple-600 text-white font-semibold flex items-center justify-center gap-2.5 shadow-lg hover:shadow-purple-500/40 hover:from-sky-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-400 focus:ring-opacity-60"
     >
       <PlayIcon className="w-5 h-5 sm:w-6 sm:h-6" />
       <span>Start Practice Session</span>
@@ -407,8 +441,10 @@ const StartScreen = ({ onStart }) => (
 );
 
 const ConversationArea = ({ messages, conversationEndRef }) => (
-  <div className="flex-grow p-3 space-y-3 overflow-y-auto sm:p-4 md:p-6 sm:space-y-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50">
+  // UI Enhancement: Increased padding, refined scrollbar appearance
+  <div className="flex-grow p-4 space-y-3.5 overflow-y-auto sm:p-5 md:p-6 sm:space-y-4 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800/50 scrollbar-thumb-rounded-full">
     {messages.map((msg) => (
+      // UI Enhancement: Added a subtle animation for new messages
       <Message key={msg.id} {...msg} />
     ))}
     <div ref={conversationEndRef} />
@@ -417,44 +453,80 @@ const ConversationArea = ({ messages, conversationEndRef }) => (
 
 const Message = ({ text, sender, time }) => {
   const isUser = sender === "user";
+  const isSystem = sender === "system"; // For system messages/errors
+  const audioRef = useRef(null);
+
+  // Add this function to handle user interaction with AI messages
+  const handleMessageClick = async () => {
+    if (!isUser && audioContext?.current?.state === "suspended") {
+      try {
+        await audioContext.current.resume();
+        // Request audio for this message if needed
+        if (ws.current?.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({ 
+            type: "request_audio",
+            text: text
+          }));
+        }
+      } catch (e) {
+        console.error("Error resuming audio context:", e);
+      }
+    }
+  };
+
+  if (isSystem) {
+    return (
+      <div className="flex justify-center animate-fadeIn">
+        <div className="max-w-[80%] sm:max-w-[75%] p-2.5 sm:p-3 my-1 rounded-lg shadow-md bg-amber-600/80 text-white text-xs sm:text-sm text-center">
+          {text}
+        </div>
+      </div>
+    );
+  }
+
   return (
+    // UI Enhancement: Added 'animate-fadeIn' (or a custom slide-up fade-in) for messages
     <div
       className={`flex animate-fadeIn ${
         isUser ? "justify-end" : "justify-start"
       }`}
     >
       {!isUser && (
-        <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 mr-2 text-white rounded-lg shadow-md sm:w-9 sm:h-9 bg-gradient-to-tr from-blue-600 to-purple-700 sm:mr-3">
-          <BotIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        // UI Enhancement: Consistent icon styling, slightly refined gradient
+        <div className="flex-shrink-0 w-8 h-8 mr-2.5 sm:w-9 sm:h-9 self-end mb-1">
+          <div className="flex justify-center items-center w-full h-full text-white bg-gradient-to-br rounded-lg shadow-md from-slate-600 to-slate-700">
+            <BotIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
         </div>
       )}
       <div
-        className={`max-w-[80%] sm:max-w-[75%] p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-md prose prose-sm prose-invert max-w-none
-          ${
-            isUser
-              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-lg sm:rounded-br-xl"
-              : "bg-slate-700 text-slate-200 rounded-bl-lg sm:rounded-bl-xl"
-          }`}
+        className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-lg prose prose-sm prose-invert max-w-[80%] sm:max-w-[75%] ${!isUser ? "cursor-pointer" : ""}
+          ${isUser
+              ? "bg-gradient-to-r from-sky-500 to-fuchsia-500 text-white rounded-br-lg sm:rounded-br-xl" 
+              : "bg-slate-700/90 backdrop-blur-sm text-slate-100 rounded-bl-lg sm:rounded-bl-xl"}`}
       >
+        {/* Using dangerouslySetInnerHTML as per original, ensure 'text' is sanitized if coming from unsafe sources */}
         <div dangerouslySetInnerHTML={{ __html: text }} />
         <div
-          className={`text-xs mt-1.5 text-right ${
-            isUser ? "text-blue-200/80" : "text-slate-400/80"
+          // UI Enhancement: More subtle timestamp
+          className={`text-xs mt-2 text-right ${
+            isUser ? "text-sky-100/80" : "text-slate-400/80"
           }`}
         >
           {time}
         </div>
         {!isUser &&
           text.includes("help you along the way") && ( // Example condition for voice viz
-            <div className="flex h-3 mt-2 space-x-1 sm:h-4">
+            <div className="flex h-3.5 mt-2 space-x-1 sm:h-4">
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="w-0.5 sm:w-1 bg-blue-400 rounded-full animate-pulse"
+                  // UI Enhancement: Softer color for visualization
+                  className="w-1 sm:w-1.5 bg-sky-400/70 rounded-full animate-pulse"
                   style={{
-                    height: `${Math.random() * 8 + 2}px`,
-                    animationDelay: `${i * 0.07}s`,
-                    animationDuration: "0.8s",
+                    height: `${Math.random() * 10 + 4}px`, // Slightly taller viz
+                    animationDelay: `${i * 0.08}s`,
+                    animationDuration: "0.9s",
                   }}
                 ></div>
               ))}
@@ -472,17 +544,19 @@ const VoiceInput = ({
   onRecordStop,
   onSessionEnd,
 }) => (
-  <div className="flex items-center justify-between flex-shrink-0 gap-3 p-3 border-t sm:p-4 bg-slate-900/50 border-slate-700 sm:gap-4">
+  // UI Enhancement: Refined padding, slightly softer top border
+  <div className="flex items-center justify-between flex-shrink-0 gap-3 p-3.5 border-t sm:p-4 bg-slate-900/60 border-slate-700/50 sm:gap-4">
     <div className="flex-grow"></div> {/* Spacer */}
     <div className="flex flex-col items-center">
       <button
-        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl focus:outline-none ring-purple-500/50 focus:ring-4
+        // UI Enhancement: Slightly larger button, refined shadows and transitions
+        className={`w-16 h-16 sm:w-[70px] sm:h-[70px] rounded-full flex items-center justify-center transition-all duration-200 shadow-xl focus:outline-none ring-purple-500/50 focus:ring-4
           ${
             isRecording
-              ? "bg-red-500 hover:bg-red-600 animate-pulse"
-              : "bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 transform hover:scale-105"
+              ? "bg-rose-500 animate-pulse hover:bg-rose-600" // Using 'rose' for a slightly different red
+              : "bg-gradient-to-br from-sky-500 to-purple-600 transform hover:from-sky-600 hover:to-purple-700 hover:scale-105 active:scale-100"
           }
-          ${isAudioPlaying ? "opacity-60 cursor-not-allowed" : ""}`}
+          ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : ""}`}
         onClick={isRecording ? onRecordStop : onRecordStart}
         disabled={isAudioPlaying}
       >
@@ -492,20 +566,22 @@ const VoiceInput = ({
           <MicrophoneIcon className="w-6 h-6 text-white sm:w-7 sm:h-7" />
         )}
       </button>
-      <div className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate-300 flex items-center">
+      {/* UI Enhancement: Slightly adjusted text styling */}
+      <div className="flex items-center mt-2 text-xs sm:text-sm text-slate-300">
         {isRecording && (
-          <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5 animate-ping"></span>
+          <span className="mr-2 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
         )}
         {isRecording
           ? "Recording..."
           : isAudioPlaying
-          ? "Playing..."
+          ? "AI Speaking..." // Clearer status
           : "Tap to speak"}
       </div>
     </div>
-    <div className="flex justify-end flex-grow">
+    <div className="flex flex-grow justify-end">
+      {/* UI Enhancement: Refined 'End Session' button styling */}
       <button
-        className="px-4 py-2 sm:px-5 sm:py-2.5 bg-red-600/80 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-red-600 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50 flex items-center gap-1.5 sm:gap-2"
+        className="px-4 py-2.5 sm:px-5 sm:py-3 bg-rose-600/90 text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-rose-600 transition-all duration-300 shadow-lg hover:shadow-rose-500/40 transform hover:scale-105 active:scale-100 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-opacity-50 flex items-center gap-1.5 sm:gap-2"
         onClick={onSessionEnd}
       >
         <StopCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
