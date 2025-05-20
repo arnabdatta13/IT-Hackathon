@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     "app",
     'rest_framework',
     'corsheaders',
+    'channels',
+
 ]
 
 MIDDLEWARE = [
@@ -133,3 +135,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+ASGI_APPLICATION = 'ITHackathon.asgi.application'
