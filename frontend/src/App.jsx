@@ -9,7 +9,6 @@ const EngloTeacherWrapper = ({ user }) => (
     <EngloTeacher user={user} />
   </Router>
 );
-
 const EngloTeacher = ({ user }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState([]);
