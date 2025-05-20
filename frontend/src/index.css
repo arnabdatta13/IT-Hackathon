@@ -1,0 +1,16 @@
+/* filepath: f:\IT-Hackathon\frontend\src\index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Your custom styles can go here */
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  min-height: 100vh;
+}
+
+/* Apply dark theme by default */
+html {
+  background-color: #111827; /* bg-gray-900 equivalent */
+}
