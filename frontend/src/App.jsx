@@ -5,9 +5,8 @@ import { useNavigate, BrowserRouter as Router } from "react-router-dom";
 import "./app.css";
 import "./index.css";
 
-// Wrapper component that provides Router context
 const EngloTeacherWrapper = ({ user }) => (
-  <Router>
+  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <EngloTeacher user={user} />
   </Router>
 );
@@ -18,6 +17,7 @@ const EngloTeacher = ({ user }) => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const ws = useRef(null);
   const mediaRecorder = useRef(null);
   const audioChunks = useRef([]);
@@ -46,9 +46,7 @@ const EngloTeacher = ({ user }) => {
           "AudioContext: Resumed successfully. New state:",
           audioContext.current.state
         );
-      } catch (e) {
-        console.error("AudioContext: Error resuming context:", e);
-      }
+      } catch (e) {}
     }
     if (audioContext.current.state !== "running") {
       console.warn(
@@ -80,7 +78,7 @@ const EngloTeacher = ({ user }) => {
           );
           setTimeout(() => {
             addMessage(
-              "Hi there! I'm your English-speaking tutor. Let's have a fun conversation in English! To start, tell me: What did you do today? (আপনি আজে কী করলেন?) Try to answer in English, and I'll help you along the way!",
+              "Hi there! I'm your English-speaking tutor. Let's have a fun conversation in English! To start, tell me: What did you do today? (আপনি আজ কী করলেন?) Try to answer in English, and I'll help you along the way!",
               "ai"
             );
           }, 1000);
@@ -116,33 +114,45 @@ const EngloTeacher = ({ user }) => {
     if (conversationEndRef.current) {
       conversationEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, isAiThinking]);
 
   const handleTextMessage = (data) => {
     try {
       const msg = JSON.parse(data);
       switch (msg.type) {
         case "output":
+          setIsAiThinking(false);
           addMessage(msg.output, "ai");
           break;
         case "transcript":
           setMessages((prevMessages) => {
-            const lastMessage = prevMessages[prevMessages.length - 1];
-            if (
-              lastMessage &&
-              lastMessage.sender === "user" &&
-              lastMessage.text === "Recording sent..."
-            ) {
-              return [
-                ...prevMessages.slice(0, -1),
-                {
-                  ...lastMessage,
-                  text: msg.transcript || "Could not transcribe.",
-                },
-              ];
+            const lastUserMessageIndex = prevMessages.findLastIndex(
+              (m) => m.sender === "user" && m.text === "Recording sent..."
+            );
+
+            if (lastUserMessageIndex !== -1) {
+              if (msg.transcript && msg.transcript.trim() !== "") {
+                const updatedMessages = [...prevMessages];
+                updatedMessages[lastUserMessageIndex] = {
+                  ...prevMessages[lastUserMessageIndex],
+                  text: msg.transcript,
+                };
+                return updatedMessages;
+              } else {
+                return prevMessages;
+              }
             }
             return prevMessages;
           });
+
+          if (!msg.transcript || msg.transcript.trim() === "") {
+            showMessage("Could not transcribe audio. Please try again.", 3000);
+          }
+
+          setIsAiThinking(true);
+          break;
+        case "audio":
+          console.log("Received 'audio' text signal from backend:", msg);
           break;
         case "coin_update":
           console.log("Coin update received:", msg.coins);
@@ -151,7 +161,7 @@ const EngloTeacher = ({ user }) => {
           navigate("/conversation-history");
           break;
         default:
-          console.warn("Received unknown text message type:", msg.type);
+          console.warn("Received unknown text message type:", msg.type, msg);
       }
     } catch (error) {
       console.error(
@@ -160,6 +170,7 @@ const EngloTeacher = ({ user }) => {
         "Raw data:",
         data
       );
+      setIsAiThinking(false);
     }
   };
 
@@ -338,7 +349,6 @@ const EngloTeacher = ({ user }) => {
         const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
           ws.current.send(audioBlob);
-          addMessage("You: [Audio sent]", "user");
         } else {
           showMessage("Connection lost. Cannot send audio.");
         }
@@ -441,15 +451,17 @@ const EngloTeacher = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0e17] to-[#121926] flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl h-[80vh] overflow-hidden border border-[#9d4edd]/30 shadow-[0_8px_30px_rgba(0,0,0,0.12)] bg-[#0a0e17]/70 backdrop-blur-lg relative rounded-2xl">
-        <header className="flex items-center justify-between p-4 md:p-6 border-b border-[#9d4edd]/15 bg-[#0a0e17]/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex items-center justify-center shadow-[0_2px_10px_rgba(28,176,246,0.3)]">
-              <i className="text-lg text-white fas fa-comment-dots"></i>
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0e17] to-[#121926] flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-4xl h-[95vh] sm:h-[90vh] md:h-[85vh] lg:h-[80vh] overflow-hidden border border-[#9d4edd]/30 shadow-[0_8px_30px_rgba(0,0,0,0.12)] bg-[#0a0e17]/70 backdrop-blur-lg relative rounded-lg sm:rounded-xl md:rounded-2xl flex flex-col">
+        <header className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b border-[#9d4edd]/15 bg-[#0a0e17]/80 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex items-center justify-center shadow-[0_2px_10px_rgba(28,176,246,0.3)]">
+              <i className="text-base text-white sm:text-lg fas fa-comment-dots"></i>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">EngloTeacher</h1>
+              <h1 className="text-base font-bold text-white sm:text-lg">
+                EngloTeacher
+              </h1>
               <p className="text-xs text-white/70">
                 AI Powered English Speaking Partner
               </p>
@@ -457,34 +469,37 @@ const EngloTeacher = ({ user }) => {
           </div>
         </header>
 
-        {!sessionActive ? (
-          <StartScreen onStart={startSession} isLoading={isLoading} />
-        ) : (
-          <>
-            <ConversationArea
-              messages={messages}
-              ref={conversationEndRef}
-              isAudioPlaying={isAudioPlaying}
-            />
-            <VoiceInput
-              isRecording={isRecording}
-              isAudioPlaying={isAudioPlaying}
-              onRecordStart={startRecording}
-              onRecordStop={stopRecording}
-              onSessionEnd={handleSessionEnd}
-            />
-          </>
-        )}
+        <main className="flex flex-col flex-grow overflow-hidden">
+          {!sessionActive ? (
+            <StartScreen onStart={startSession} isLoading={isLoading} />
+          ) : (
+            <>
+              <ConversationArea
+                messages={messages}
+                ref={conversationEndRef}
+                isAudioPlaying={isAudioPlaying}
+                isAiThinking={isAiThinking}
+              />
+              <VoiceInput
+                isRecording={isRecording}
+                isAudioPlaying={isAudioPlaying}
+                onRecordStart={startRecording}
+                onRecordStop={stopRecording}
+                onSessionEnd={handleSessionEnd}
+              />
+            </>
+          )}
+        </main>
       </div>
     </div>
   );
 };
 
 const StartScreen = ({ onStart, isLoading }) => (
-  <div className="flex flex-col items-center justify-center h-full px-6 py-10 text-center animate-fadeIn">
-    <div className="w-28 h-28 rounded-full bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex items-center justify-center mb-8 shadow-[0_5px_20px_rgba(122,59,255,0.4)]">
+  <div className="flex flex-col items-center justify-center flex-grow h-full px-4 py-8 text-center sm:px-6 sm:py-10 animate-fadeIn">
+    <div className="w-20 h-20 sm:w-24 md:w-28 sm:h-24 md:h-28 rounded-full bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex items-center justify-center mb-6 sm:mb-8 shadow-[0_5px_20px_rgba(122,59,255,0.4)]">
       <svg
-        className="text-white w-14 h-14"
+        className="w-10 h-10 text-white sm:w-12 sm:h-12 md:w-14 md:h-14"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="currentColor"
@@ -493,10 +508,10 @@ const StartScreen = ({ onStart, isLoading }) => (
         <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2c0 3.527 2.613 6.437 6 6.92V21H7v2h10v-2h-2v-2.08c3.387-.483 6-3.393 6-6.92v-2h-2z" />
       </svg>
     </div>
-    <h1 className="mb-4 text-2xl font-bold text-white md:text-3xl">
+    <h1 className="mb-3 text-xl font-bold text-white sm:mb-4 sm:text-2xl md:text-3xl">
       Improve Your English Speaking
     </h1>
-    <p className="text-md text-[#e0e6ed] max-w-lg mb-10 leading-relaxed">
+    <p className="text-sm sm:text-md text-[#e0e6ed] max-w-xs sm:max-w-md mb-8 sm:mb-10 leading-relaxed">
       Practice conversational English with our AI-powered speaking assistant.
       Get real-time feedback on pronunciation, grammar, and vocabulary. Ready to
       begin?
@@ -504,12 +519,12 @@ const StartScreen = ({ onStart, isLoading }) => (
     <button
       onClick={onStart}
       disabled={isLoading}
-      className="bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] text-white px-6 py-6 rounded-full flex items-center gap-2 shadow-[0_5px_20px_rgba(122,59,255,0.4)] hover:shadow-[0_8px_30px_rgba(122,59,255,0.6)] hover:-translate-y-1 transition-all font-semibold text-lg"
+      className="bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] text-white px-5 py-3 sm:px-6 sm:py-4 md:py-3 rounded-full flex items-center gap-2 shadow-[0_5px_20px_rgba(122,59,255,0.4)] hover:shadow-[0_8px_30px_rgba(122,59,255,0.6)] hover:-translate-y-1 transition-all font-semibold text-base sm:text-lg"
     >
       {isLoading ? (
         <span className="flex items-center">
           <svg
-            className="w-5 h-5 mr-2 -ml-1 text-white animate-spin"
+            className="w-4 h-4 mr-2 -ml-1 text-white sm:w-5 sm:h-5 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -532,7 +547,7 @@ const StartScreen = ({ onStart, isLoading }) => (
         </span>
       ) : (
         <>
-          <i className="fas fa-play"></i>
+          <i className="text-sm fas fa-play sm:text-base"></i>
           <span>Start Practice Session</span>
         </>
       )}
@@ -541,52 +556,71 @@ const StartScreen = ({ onStart, isLoading }) => (
 );
 
 const ConversationArea = React.forwardRef(
-  ({ messages, isAudioPlaying }, ref) => (
-    <div
-      className="flex-1 p-4 space-y-4 overflow-y-auto md:p-5 scrollbar-thin"
-      style={{ height: "calc(100% - 180px)" }}
-    >
+  ({ messages, isAudioPlaying, isAiThinking }, ref) => (
+    <div className="flex-grow p-3 space-y-3 overflow-y-auto sm:p-4 sm:space-y-4 scrollbar-thin">
       {messages.map((msg) => (
-        <Message key={msg.id} {...msg} isAudioPlaying={isAudioPlaying} />
+        <Message
+          key={msg.id}
+          {...msg}
+          isAudioPlaying={isAudioPlaying && msg.sender === "ai"}
+        />
       ))}
+      {isAiThinking && <AiTypingMessage />}
       <div ref={ref} />
     </div>
   )
 );
 
+const AiTypingMessage = () => (
+  <div className="flex self-start max-w-[85%] sm:max-w-[75%] mb-3 sm:mb-4 animate-fadeIn">
+    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-md bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex-shrink-0 flex items-center justify-center mr-2 sm:mr-3">
+      <i className="text-sm text-white fas fa-robot sm:text-base"></i>
+    </div>
+    <div className="p-3 sm:p-4 rounded-2xl relative bg-[#0f141e]/70 border border-[#9d4edd]/20 text-white rounded-tl-sm">
+      <div className="flex items-center h-4 space-x-1 sm:h-5">
+        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/70 rounded-full animate-bounce"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const Message = ({ text, sender, time, isAudioPlaying }) => (
   <div
-    className={`flex max-w-[85%] mb-4 animate-fadeIn ${
+    className={`flex max-w-[90%] sm:max-w-[85%] mb-3 sm:mb-4 animate-fadeIn ${
       sender === "user" ? "self-end justify-end ml-auto" : "self-start"
     }`}
   >
     {sender === "ai" && (
-      <div className="w-9 h-9 rounded-md bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex-shrink-0 flex items-center justify-center mr-3">
-        <i className="text-white fas fa-robot"></i>
+      <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-md bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] flex-shrink-0 flex items-center justify-center mr-2 sm:mr-3">
+        <i className="text-sm text-white fas fa-robot sm:text-base"></i>
       </div>
     )}
     <div
-      className={`p-4 rounded-2xl relative ${
+      className={`p-3 sm:p-4 rounded-2xl relative ${
         sender === "user"
           ? "bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] text-white rounded-br-sm"
           : "bg-[#0f141e]/70 border border-[#9d4edd]/20 text-white rounded-tl-sm"
       }`}
     >
       <div
-        className="text-sm leading-relaxed md:text-base"
+        className="text-xs leading-relaxed prose-sm prose sm:text-sm md:text-base prose-invert max-w-none"
         dangerouslySetInnerHTML={{ __html: text }}
       />
-      <div className="mt-1 text-xs text-right opacity-70">{time}</div>
+      <div className="mt-1 text-[10px] sm:text-xs text-right opacity-70">
+        {time}
+      </div>
       {sender === "ai" && (
         <div
-          className={`flex items-end gap-1 h-5 mt-2 voice-visualization ${
+          className={`flex items-end gap-0.5 sm:gap-1 h-4 sm:h-5 mt-1.5 sm:mt-2 voice-visualization ${
             isAudioPlaying ? "active" : ""
           }`}
         >
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="w-1 bg-[#00f0ff] rounded-full"
+              className="w-0.5 sm:w-1 bg-[#00f0ff] rounded-full"
               style={{
                 height: isAudioPlaying ? `${20 + Math.random() * 80}%` : "20%",
                 animationDelay: `${i * 0.1}s`,
@@ -606,12 +640,12 @@ const VoiceInput = ({
   onRecordStop,
   onSessionEnd,
 }) => (
-  <div className="p-4 md:p-5 flex flex-col items-center border-t border-[#9d4edd]/15 bg-[#0a0e17]/80">
-    <div className="flex flex-col items-center w-full max-w-md">
+  <div className="p-3 sm:p-4 md:p-5 flex flex-col items-center border-t border-[#9d4edd]/15 bg-[#0a0e17]/80 flex-shrink-0">
+    <div className="flex flex-col items-center w-full max-w-xs sm:max-w-sm md:max-w-md">
       <button
         onClick={isRecording ? onRecordStop : onRecordStart}
         disabled={isAudioPlaying}
-        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_5px_20px_rgba(122,59,255,0.4)] transition-all relative ${
+        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-[0_5px_20px_rgba(122,59,255,0.4)] transition-all relative ${
           isRecording
             ? "bg-gradient-to-r from-[#ff574d] to-[#ff2a6d] animate-pulse-red"
             : "bg-gradient-to-r from-[#1cb0f6] to-[#9d4edd] hover:scale-105 hover:shadow-[0_5px_25px_rgba(122,59,255,0.6)]"
@@ -620,13 +654,13 @@ const VoiceInput = ({
         <i
           className={`fas fa-${
             isRecording ? "stop" : "microphone"
-          } text-white text-xl`}
+          } text-white text-lg sm:text-xl`}
         ></i>
       </button>
 
-      <div className="flex items-center gap-2 mt-3 text-sm text-[#e0e6ed]">
+      <div className="flex items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3 text-xs sm:text-sm text-[#e0e6ed]">
         <div
-          className={`w-2 h-2 rounded-full ${
+          className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
             isRecording ? "bg-[#58cc02] animate-pulse" : "bg-[#ff574d]"
           }`}
         ></div>
@@ -634,11 +668,11 @@ const VoiceInput = ({
       </div>
 
       {isRecording && (
-        <div className="flex items-end h-5 gap-1 mt-2">
+        <div className="flex items-end h-4 sm:h-5 gap-0.5 sm:gap-1 mt-1.5 sm:mt-2">
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="w-1 bg-[#00f0ff] rounded-full animate-voice-bar"
+              className="w-0.5 sm:w-1 bg-[#00f0ff] rounded-full animate-voice-bar"
               style={{
                 height: `${20 + Math.random() * 80}%`,
                 animationDelay: `${i * 0.1}s`,
@@ -649,12 +683,12 @@ const VoiceInput = ({
       )}
     </div>
 
-    <div className="flex flex-wrap justify-center w-full gap-3 mt-5">
+    <div className="flex flex-wrap justify-center w-full gap-2 mt-3 sm:gap-3 sm:mt-4 md:mt-5">
       <button
         onClick={onSessionEnd}
-        className="bg-[#ff574d] hover:bg-[#ff2a6d] text-white border-none shadow-md hover:shadow-lg hover:-translate-y-1 transition-all px-4 py-2 rounded-xl flex items-center gap-2"
+        className="bg-[#ff574d] hover:bg-[#ff2a6d] text-white border-none shadow-md hover:shadow-lg hover:-translate-y-0.5 sm:hover:-translate-y-1 transition-all px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
       >
-        <i className="text-white fas fa-stop-circle"></i>
+        <i className="text-sm text-white fas fa-stop-circle sm:text-base"></i>
         <span>End Session</span>
       </button>
     </div>
