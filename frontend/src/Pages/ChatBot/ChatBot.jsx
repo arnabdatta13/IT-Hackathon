@@ -37,7 +37,8 @@ const ChatBot = () => {
 
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = true;
+    // Change this from true to false if you only want final results
+    recognitionRef.current.interimResults = false;
     recognitionRef.current.lang = "en-US";
 
     recognitionRef.current.onresult = (event) => {
@@ -45,12 +46,30 @@ const ChatBot = () => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setInput((prev) => prev + " " + transcript);
+      console.log("Voice Transcript:", transcript);
+      
+      setInput(transcript);
     };
 
     recognitionRef.current.onerror = (event) => {
       console.error("Speech recognition error:", event);
       setIsRecording(false);
+      
+      // Add user-friendly error handling
+      Toastify({
+        text: `Speech recognition failed: ${event.error.replace(/_/g, ' ')}`,
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        backgroundColor: "#ff0000",
+        stopOnFocus: true,
+      }).showToast();
+
+      // Reset recording state
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      audioChunksRef.current = [];
     };
 
     recognitionRef.current.onend = () => {
@@ -146,13 +165,13 @@ const ChatBot = () => {
   // Show loading screen before the actual chat
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen p-4 text-white bg-gradient-to-br from-slate-900 to-gray-900">
-        <div className="relative flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32">
-          <div className="absolute w-full h-full border-4 border-purple-500 rounded-full border-t-transparent animate-spin"></div>
-          <div className="absolute w-3/4 border-4 rounded-full h-3/4 border-t-transparent border-sky-400 animate-spin animation-delay-200"></div>
-          <FaTrophy className="w-10 h-10 text-purple-400 sm:w-12 sm:h-12 animate-pulse" />
+      <div className="flex flex-col justify-center items-center p-4 h-screen text-white bg-gradient-to-br to-gray-900 from-slate-900">
+        <div className="flex relative justify-center items-center w-24 h-24 sm:w-32 sm:h-32">
+          <div className="absolute w-full h-full rounded-full border-4 border-purple-500 animate-spin border-t-transparent"></div>
+          <div className="absolute w-3/4 h-3/4 rounded-full border-4 border-sky-400 animate-spin border-t-transparent animation-delay-200"></div>
+          <FaTrophy className="w-10 h-10 text-purple-400 animate-pulse sm:w-12 sm:h-12" />
         </div>
-        <p className="mt-6 text-lg font-semibold tracking-wider sm:text-xl animate-pulse">
+        <p className="mt-6 text-lg font-semibold tracking-wider animate-pulse sm:text-xl">
           Initializing AI Protocols...
         </p>
         <p className="mt-2 text-xs text-slate-400">Please wait a moment.</p>
@@ -161,9 +180,9 @@ const ChatBot = () => {
   }
 
   return (
-    <div className="container flex flex-col items-center justify-end h-screen mx-auto">
+    <div className="container flex flex-col justify-end items-center mx-auto h-screen">
       {/* Messages */}
-      <div className="flex flex-col flex-1 w-full px-4 py-2 space-y-2 overflow-y-auto">
+      <div className="flex overflow-y-auto flex-col flex-1 px-4 py-2 space-y-2 w-full">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -185,11 +204,11 @@ const ChatBot = () => {
       </div>
 
       {/* Input */}
-      <div className="relative z-10 flex items-end w-full gap-2 px-4 py-3 border-t InputBox">
+      <div className="flex relative z-10 gap-2 items-end px-4 py-3 w-full border-t InputBox">
         <button
           type="button"
           onClick={() => fileInputRef.current.click()}
-          className="p-2 text-gray-600 transition bg-gray-200 rounded-full hover:bg-gray-300"
+          className="p-2 text-gray-600 bg-gray-200 rounded-full transition hover:bg-gray-300"
           title="Attach file"
         >
           <Paperclip size={20} />
@@ -205,7 +224,7 @@ const ChatBot = () => {
         <button
           type="button"
           onClick={toggleRecording}
-          className="p-2 text-gray-600 transition bg-gray-200 rounded-full hover:bg-gray-300"
+          className="p-2 text-gray-600 bg-gray-200 rounded-full transition hover:bg-gray-300"
           title="Start voice input"
         >
           <Mic size={20} />
@@ -217,14 +236,14 @@ const ChatBot = () => {
           onKeyDown={handleKeyDown}
           rows={1}
           placeholder="Send a message..."
-          className="w-full px-4 py-2 border border-gray-300 resize-none rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 w-full rounded-xl border border-gray-300 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
           style={{ maxHeight: "200px", overflowY: "auto" }}
         />
 
         <button
           type="button"
           onClick={handleSend}
-          className="p-2 text-white transition bg-blue-500 rounded-full hover:bg-blue-600"
+          className="p-2 text-white bg-blue-500 rounded-full transition hover:bg-blue-600"
           title="Send message"
         >
           <SendHorizonal size={20} />
