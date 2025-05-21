@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { SendHorizonal, Paperclip, Mic } from 'lucide-react';
-import Toastify from 'toastify-js';
-import 'toastify-js/src/toastify.css';
-import './chatBot.css';
+import React, { useState, useEffect, useRef } from "react";
+import { SendHorizonal, Paperclip, Mic } from "lucide-react";
+import { FaTrophy } from "react-icons/fa"; 
+import Toastify from "toastify-js";
+import "toastify-js/src/toastify.css";
+import "./chatBot.css";
 
 const ChatBot = () => {
   const [input, setInput] = useState("");
@@ -15,9 +16,9 @@ const ChatBot = () => {
   const audioChunksRef = useRef([]);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2000);
@@ -29,7 +30,7 @@ const ChatBot = () => {
         gravity: "top",
         position: "right",
         backgroundColor: "#ff0000",
-        stopOnFocus: true
+        stopOnFocus: true,
       }).showToast();
       return;
     }
@@ -37,7 +38,7 @@ const ChatBot = () => {
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = true;
-    recognitionRef.current.lang = 'en-US';
+    recognitionRef.current.lang = "en-US";
 
     recognitionRef.current.onresult = (event) => {
       let transcript = "";
@@ -64,7 +65,9 @@ const ChatBot = () => {
 
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
 
         recognitionRef.current.start();
         setIsRecording(true);
@@ -79,11 +82,13 @@ const ChatBot = () => {
         };
 
         mediaRecorderRef.current.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: "audio/webm",
+          });
           const audioURL = URL.createObjectURL(audioBlob);
           setMessages((prev) => [
             ...prev,
-            { type: 'audio', content: audioURL, blob: audioBlob, from: 'user' },
+            { type: "audio", content: audioURL, blob: audioBlob, from: "user" },
           ]);
         };
 
@@ -104,12 +109,16 @@ const ChatBot = () => {
   const handleSend = () => {
     const trimmed = input.trim();
     if (trimmed !== "") {
-      const userMessage = { type: 'text', content: trimmed, from: 'user' };
+      const userMessage = { type: "text", content: trimmed, from: "user" };
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
 
       setTimeout(() => {
-        const botReply = { type: 'text', content: "This is a static bot reply.", from: 'bot' };
+        const botReply = {
+          type: "text",
+          content: "This is a static bot reply.",
+          from: "bot",
+        };
         setMessages((prev) => [...prev, botReply]);
       }, 500);
     }
@@ -125,10 +134,10 @@ const ChatBot = () => {
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files.length > 0) {
-      const fileArray = Array.from(files).map(file => ({
-        type: 'file',
+      const fileArray = Array.from(files).map((file) => ({
+        type: "file",
         content: file.name,
-        from: 'user',
+        from: "user",
       }));
       setMessages((prev) => [...prev, ...fileArray]);
     }
@@ -137,31 +146,38 @@ const ChatBot = () => {
   // Show loading screen before the actual chat
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black text-white flex-col space-y-4">
-        <div className="loader-science"></div>
-        <p className="text-lg">Initializing AI protocols...</p>
+      <div className="flex flex-col items-center justify-center h-screen p-4 text-white bg-gradient-to-br from-slate-900 to-gray-900">
+        <div className="relative flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32">
+          <div className="absolute w-full h-full border-4 border-purple-500 rounded-full border-t-transparent animate-spin"></div>
+          <div className="absolute w-3/4 border-4 rounded-full h-3/4 border-t-transparent border-sky-400 animate-spin animation-delay-200"></div>
+          <FaTrophy className="w-10 h-10 text-purple-400 sm:w-12 sm:h-12 animate-pulse" />
+        </div>
+        <p className="mt-6 text-lg font-semibold tracking-wider sm:text-xl animate-pulse">
+          Initializing AI Protocols...
+        </p>
+        <p className="mt-2 text-xs text-slate-400">Please wait a moment.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen justify-end items-center container mx-auto">
+    <div className="container flex flex-col items-center justify-end h-screen mx-auto">
       {/* Messages */}
-      <div className="w-full px-4 py-2 overflow-y-auto flex-1 space-y-2 flex flex-col">
+      <div className="flex flex-col flex-1 w-full px-4 py-2 space-y-2 overflow-y-auto">
         {messages.map((msg, index) => (
           <div
             key={index}
             className={`p-2 rounded-xl w-fit max-w-md shadow text flex gap-1 ${
-              msg.from === 'bot'
-                ? 'bg-gray-200 text-black self-start'
-                : 'bg-white text-black self-end'
+              msg.from === "bot"
+                ? "bg-gray-200 text-black self-start"
+                : "bg-white text-black self-end"
             }`}
           >
-            {msg.type === 'text' ? (
+            {msg.type === "text" ? (
               <span>{msg.content}</span>
-            ) : msg.type === 'file' ? (
+            ) : msg.type === "file" ? (
               <span>📎 {msg.content}</span>
-            ) : msg.type === 'audio' ? (
+            ) : msg.type === "audio" ? (
               <audio controls src={msg.content}></audio>
             ) : null}
           </div>
@@ -169,11 +185,11 @@ const ChatBot = () => {
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t flex items-end gap-2 InputBox w-full relative z-10">
+      <div className="relative z-10 flex items-end w-full gap-2 px-4 py-3 border-t InputBox">
         <button
           type="button"
           onClick={() => fileInputRef.current.click()}
-          className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 transition"
+          className="p-2 text-gray-600 transition bg-gray-200 rounded-full hover:bg-gray-300"
           title="Attach file"
         >
           <Paperclip size={20} />
@@ -189,7 +205,7 @@ const ChatBot = () => {
         <button
           type="button"
           onClick={toggleRecording}
-          className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 transition"
+          className="p-2 text-gray-600 transition bg-gray-200 rounded-full hover:bg-gray-300"
           title="Start voice input"
         >
           <Mic size={20} />
@@ -201,14 +217,14 @@ const ChatBot = () => {
           onKeyDown={handleKeyDown}
           rows={1}
           placeholder="Send a message..."
-          className="w-full resize-none rounded-xl border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border border-gray-300 resize-none rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
           style={{ maxHeight: "200px", overflowY: "auto" }}
         />
 
         <button
           type="button"
           onClick={handleSend}
-          className="p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition"
+          className="p-2 text-white transition bg-blue-500 rounded-full hover:bg-blue-600"
           title="Send message"
         >
           <SendHorizonal size={20} />
