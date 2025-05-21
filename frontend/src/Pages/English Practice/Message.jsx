@@ -1,12 +1,13 @@
-import React, { useRef, useContext } from 'react';
-import { BotIcon } from './Icons';
-import { AudioContext } from './context/AudioContext';
+import React, { useRef, useContext, useState } from "react";
+import { BotIcon } from "./Icons";
+import { AudioContext } from "./context/AudioContext";
 
 const Message = ({ text, sender, time }) => {
   const isUser = sender === "user";
   const isSystem = sender === "system";
   const { requestAudioForText } = useContext(AudioContext) || {};
-  
+  const [isHovered, setIsHovered] = useState(false);
+
   const handleMessageClick = async () => {
     if (!isUser && requestAudioForText) {
       requestAudioForText(text);
@@ -15,8 +16,8 @@ const Message = ({ text, sender, time }) => {
 
   if (isSystem) {
     return (
-      <div className="flex justify-center animate-fadeIn">
-        <div className="max-w-[80%] sm:max-w-[75%] p-2.5 sm:p-3 my-1 rounded-lg shadow-md bg-amber-600/80 text-white text-xs sm:text-sm text-center">
+      <div className="flex justify-center my-2 animate-fadeIn">
+        <div className="max-w-[80%] sm:max-w-[75%] p-3 sm:p-3.5 my-1 rounded-xl shadow-md bg-gradient-to-r from-amber-600/90 to-amber-700/90 text-white text-xs sm:text-sm text-center border border-amber-500/30 backdrop-blur-sm">
           {text}
         </div>
       </div>
@@ -27,46 +28,67 @@ const Message = ({ text, sender, time }) => {
     <div
       className={`flex animate-fadeIn ${
         isUser ? "justify-end" : "justify-start"
-      }`}
+      } my-3 sm:my-4`}
     >
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 mr-2.5 sm:w-9 sm:h-9 self-end mb-1">
-          <div className="flex items-center justify-center w-full h-full text-white rounded-lg shadow-md bg-gradient-to-br from-slate-600 to-slate-700">
-            <BotIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="flex-shrink-0 w-9 h-9 mr-2.5 sm:w-10 sm:h-10 self-end mb-1">
+          <div className="flex items-center justify-center w-full h-full text-white transition-all duration-300 border shadow-lg rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 border-indigo-400/30">
+            <BotIcon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
       )}
-      
+
       <div
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onClick={!isUser ? handleMessageClick : undefined}
-        className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-lg prose prose-sm prose-invert max-w-[80%] sm:max-w-[75%] ${!isUser ? "cursor-pointer" : ""}
-          ${isUser
-              ? "bg-gradient-to-r from-sky-500 to-fuchsia-500 text-white rounded-br-lg sm:rounded-br-xl" 
-              : "bg-slate-700/90 backdrop-blur-sm text-slate-100 rounded-bl-lg sm:rounded-bl-xl"}`}
+        className={`p-3.5 sm:p-4 rounded-2xl shadow-lg prose prose-sm prose-invert max-w-[80%] sm:max-w-[75%] md:max-w-[70%] border transition-all duration-300 
+          ${!isUser ? "cursor-pointer hover:shadow-xl" : ""} 
+          ${
+            isUser
+              ? "bg-gradient-to-r from-sky-500 to-fuchsia-600 text-white rounded-br-none border-sky-400/30"
+              : `bg-slate-800/90 backdrop-blur-sm text-slate-100 rounded-bl-none border-blue-500/30 ${
+                  isHovered ? "shadow-lg shadow-blue-500/10" : ""
+                }`
+          }`}
       >
-        <div dangerouslySetInnerHTML={{ __html: text }} />
-        
         <div
-          className={`text-xs mt-2 text-right ${
-            isUser ? "text-sky-100/80" : "text-slate-400/80"
+          className="text-sm leading-relaxed tracking-wide sm:text-base"
+          dangerouslySetInnerHTML={{ __html: text }}
+        />
+
+        <div
+          className={`text-xs font-medium mt-3 text-right flex items-center justify-end gap-1 ${
+            isUser ? "text-sky-100/90" : "text-blue-300/80"
           }`}
         >
-          {time}
+          <span className="opacity-80">{time}</span>
+          {/* {!isUser && (
+            <span className="ml-1 text-[0.65rem] px-1.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30">
+              AI
+            </span>
+          )} */}
         </div>
-        
+
         {!isUser && text.includes("help you along the way") && (
-          <div className="flex h-3.5 mt-2 space-x-1 sm:h-4">
+          <div className="flex h-4 mt-2 space-x-1.5 sm:h-5 justify-center">
             {[...Array(5)].map((_, i) => (
               <div
                 key={i}
-                className="w-1 sm:w-1.5 bg-sky-400/70 rounded-full animate-pulse"
+                className="w-1 sm:w-1.5 bg-blue-400 rounded-full animate-pulse"
                 style={{
-                  height: `${Math.random() * 10 + 4}px`,
-                  animationDelay: `${i * 0.08}s`,
-                  animationDuration: "0.9s",
+                  height: `${Math.random() * 12 + 5}px`,
+                  animationDelay: `${i * 0.1}s`,
+                  animationDuration: "1.2s",
                 }}
               ></div>
             ))}
+          </div>
+        )}
+
+        {!isUser && !text.includes("help you along the way") && isHovered && (
+          <div className="absolute top-2 right-2 text-[0.65rem] text-blue-300/70">
+            Click to hear
           </div>
         )}
       </div>
