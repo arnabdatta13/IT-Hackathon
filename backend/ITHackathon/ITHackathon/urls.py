@@ -20,6 +20,7 @@ from app.views import *
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', home ,name=""),
 ]
 
 
@@ -28,3 +29,4 @@ from . import consumers
 websocket_urlpatterns = [
     path("ws/chat/", consumers.MyConsumer.as_asgi()),
 ]
+
