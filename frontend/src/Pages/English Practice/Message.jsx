@@ -1,16 +1,99 @@
-import React, { useRef, useContext, useState } from "react";
+import React, { useRef, useContext, useState, useEffect } from "react";
 import { BotIcon } from "./Icons";
 import { AudioContext } from "./context/AudioContext";
 
-const Message = ({ text, sender, time }) => {
+// Create a global reference to track if any message is playing
+const globalAudioState = {
+  isPlaying: false,
+  stopAll: () => {
+    window.speechSynthesis.cancel();
+    globalAudioState.isPlaying = false;
+  },
+  playedMessages: new Set(), // Track which messages have been played
+};
+
+const Message = ({ text, sender, time, isRecording, id }) => {
   const isUser = sender === "user";
   const isSystem = sender === "system";
-  const { requestAudioForText } = useContext(AudioContext) || {};
+  const [isPlaying, setIsPlaying] = useState(false);
+  const synthRef = useRef(window.speechSynthesis);
   const [isHovered, setIsHovered] = useState(false);
+  const utteranceRef = useRef(null);
+  const [hasBeenPlayed, setHasBeenPlayed] = useState(
+    globalAudioState.playedMessages.has(id)
+  );
 
-  const handleMessageClick = async () => {
-    if (!isUser && requestAudioForText) {
-      requestAudioForText(text);
+  // Force stop ALL audio playback when recording starts
+  useEffect(() => {
+    if (isRecording) {
+      // Use the global stop function to ensure all messages stop playing
+      globalAudioState.stopAll();
+      setIsPlaying(false);
+      utteranceRef.current = null;
+    }
+  }, [isRecording]);
+
+  // Let the WebSocket handle auto-play
+  // Don't try to auto-play in this component
+
+  // Make sure audio stops when unmounting
+  useEffect(() => {
+    return () => {
+      if (utteranceRef.current) {
+        synthRef.current.cancel();
+      }
+    };
+  }, []);
+
+  const generateAudio = (text) => {
+    // Ensure any existing audio is stopped
+    stopAudio();
+
+    // Create a new utterance
+    const synth = synthRef.current;
+    utteranceRef.current = new SpeechSynthesisUtterance(text);
+    const voices = synth.getVoices();
+    const femaleVoice = voices.find(
+      (voice) => voice.lang === "en-US" && voice.name.includes("Female")
+    );
+    utteranceRef.current.voice = femaleVoice || voices[0];
+    utteranceRef.current.rate = 1;
+    utteranceRef.current.pitch = 1;
+
+    utteranceRef.current.onend = () => {
+      setIsPlaying(false);
+      globalAudioState.isPlaying = false;
+      utteranceRef.current = null;
+    };
+
+    utteranceRef.current.onerror = () => {
+      setIsPlaying(false);
+      globalAudioState.isPlaying = false;
+      utteranceRef.current = null;
+    };
+
+    // Set global and local state
+    globalAudioState.isPlaying = true;
+    setIsPlaying(true);
+
+    // Start speaking
+    synth.speak(utteranceRef.current);
+  };
+
+  const stopAudio = () => {
+    synthRef.current.cancel();
+    setIsPlaying(false);
+    globalAudioState.isPlaying = false;
+    utteranceRef.current = null;
+  };
+
+  const handleMessageClick = () => {
+    if (!isUser && !isSystem) {
+      if (isPlaying) {
+        stopAudio();
+      } else {
+        generateAudio(text);
+      }
     }
   };
 
@@ -63,11 +146,6 @@ const Message = ({ text, sender, time }) => {
           }`}
         >
           <span className="opacity-80">{time}</span>
-          {/* {!isUser && (
-            <span className="ml-1 text-[0.65rem] px-1.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30">
-              AI
-            </span>
-          )} */}
         </div>
 
         {!isUser && text.includes("help you along the way") && (
@@ -83,12 +161,6 @@ const Message = ({ text, sender, time }) => {
                 }}
               ></div>
             ))}
-          </div>
-        )}
-
-        {!isUser && !text.includes("help you along the way") && isHovered && (
-          <div className="absolute top-2 right-2 text-[0.65rem] text-blue-300/70">
-            Click to hear
           </div>
         )}
       </div>

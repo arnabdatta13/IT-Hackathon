@@ -38,10 +38,8 @@ export const useAudioProcessor = (
       mediaRecorder.current.start();
       setIsRecording(true);
 
-      // Generate a unique ID for this recording placeholder
       const placeholderId = `user_recording_${Date.now()}`;
 
-      // Store the current placeholder ID for transcript updates
       currentRecordingId.current = placeholderId;
 
       return true;
@@ -88,7 +86,6 @@ export const useAudioProcessor = (
           return;
         }
 
-        // Resume AudioContext if suspended (needed for some browsers)
         if (audioContext.current.state === "suspended") {
           await audioContext.current.resume();
         }

@@ -80,6 +80,21 @@ export const useWebSocket = (
         switch (msg.type) {
           case "output":
             addMessage(msg.output, "ai");
+            
+            // Automatically play text using speech synthesis
+            const synth = window.speechSynthesis;
+            synth.cancel(); // Cancel any ongoing speech
+            
+            const utterance = new SpeechSynthesisUtterance(msg.output);
+            const voices = synth.getVoices();
+            const femaleVoice = voices.find(voice => 
+              voice.lang === "en-US" && voice.name.includes("Female")
+            );
+            utterance.voice = femaleVoice || voices[0];
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            synth.speak(utterance);
+            
             // Request audio for the AI message
             if (ws.current?.readyState === WebSocket.OPEN) {
               ws.current.send(
@@ -118,7 +133,15 @@ export const useWebSocket = (
             }
             break;
           case "audio":
-            console.log("Received audio signal from server");
+            if (msg.audio_data) {
+              const audioData = atob(msg.audio_data);
+              const binaryData = new Uint8Array(audioData.length);
+              for (let i = 0; i < audioData.length; i++) {
+                binaryData[i] = audioData.charCodeAt(i);
+              }
+              const audioBlob = new Blob([binaryData], { type: "audio/mpeg" });
+              handleAudioMessage(audioBlob);
+            }
             break;
           case "coin_update":
             console.log("Coin update:", msg.coins);

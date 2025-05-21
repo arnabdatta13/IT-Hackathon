@@ -6,6 +6,7 @@ const ConversationArea = ({
   conversationEndRef,
   isAITyping,
   pendingTranscript,
+  isRecording,
 }) => {
   const lastMsg = messages[messages.length - 1];
   const showPending =
@@ -32,7 +33,7 @@ const ConversationArea = ({
           </div>
         )}
         {messages.map((msg) => (
-          <Message key={msg.id} {...msg} />
+          <Message key={msg.id} {...msg} isRecording={isRecording} />
         ))}
         {showPending && (
           <div className="flex justify-end my-3 animate-fadeIn sm:my-4">

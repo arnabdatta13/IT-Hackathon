@@ -43,22 +43,8 @@ export const English = ({ user }) => {
   const { speak, voices } = useSpeechSynthesis();
 
   const handleTextMessage = (message) => {
+    // Just pass through to the original handler
     originalHandleTextMessage(message);
-    if (message.text && message.sender === "ai") {
-      try {
-        // Use react-speech-kit for TTS
-        speak({
-          text: message.text,
-          voice: voices.find((v) => v.lang === "en-US") || undefined,
-          rate: 1,
-          pitch: 1,
-          volume: 1,
-        });
-      } catch (err) {
-        console.error("Speech synthesis error:", err);
-      }
-      requestAudioForText && requestAudioForText(message.text);
-    }
   };
 
   const {
@@ -80,7 +66,6 @@ export const English = ({ user }) => {
     setMessages
   );
 
-  // Initialize WebSocket when session becomes active
   useEffect(() => {
     if (sessionActive) {
       connectWebSocket(handleTextMessage, handleAudioMessage);
@@ -90,21 +75,18 @@ export const English = ({ user }) => {
     }
   }, [sessionActive, user]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     if (conversationEndRef.current) {
       conversationEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // Handle playing audio when new audio is received
   useEffect(() => {
     if (audioBufferQueue.current.length > 0 && !isAudioPlaying) {
       playAudioQueue();
     }
   }, [audioBufferQueue.current.length, isAudioPlaying]);
 
-  // When a new AI message arrives, set isAITyping to false
   useEffect(() => {
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
@@ -119,12 +101,11 @@ export const English = ({ user }) => {
     }
   }, [messages, pendingTranscript]);
 
-  // Add transcript as user message when finalized
   const handleTranscript = (text, isFinal) => {
     const cleanedText = text.trim();
 
     if (isFinal) {
-      setPendingTranscript(""); // Clear pending transcript
+      setPendingTranscript("");
 
       if (cleanedText) {
         setMessages((prevMessages) => {
@@ -160,12 +141,18 @@ export const English = ({ user }) => {
 
   const handleRecordStart = async () => {
     if (isAudioPlaying) return;
+    
+    // Reset played messages tracking when starting a new recording
+    if (window.globalAudioState && window.globalAudioState.playedMessages) {
+      window.globalAudioState.playedMessages.clear();
+    }
+    
     await startRecording();
   };
 
   return (
     <div className="min-h-screen font-sans bg-gradient-to-br from-indigo-950 via-slate-900 to-neutral-950">
-      <div className="h-screen bg-slate-800/60 backdrop-blur-2xl flex flex-col overflow-hidden border-slate-700/50">
+      <div className="flex flex-col h-screen overflow-hidden bg-slate-800/60 backdrop-blur-2xl border-slate-700/50">
         <header className="flex items-center justify-between flex-shrink-0 p-3.5 border-b sm:p-4 bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/30">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="flex items-center justify-center w-10 h-10 text-white border rounded-lg shadow-lg bg-gradient-to-tr from-blue-500 to-indigo-600 sm:w-11 sm:h-11 border-blue-400/20">
@@ -200,6 +187,7 @@ export const English = ({ user }) => {
                 conversationEndRef={conversationEndRef}
                 isAITyping={isAITyping}
                 pendingTranscript={pendingTranscript}
+                isRecording={isRecording}
               />
               <VoiceInput
                 isRecording={isRecording}
