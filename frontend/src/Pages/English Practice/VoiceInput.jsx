@@ -61,6 +61,13 @@ const VoiceInput = ({
     }
   }, [isRecording]);
 
+  useEffect(() => {
+    if (isRecording) {
+      // Force stop all speech synthesis when recording starts
+      window.speechSynthesis.cancel();
+    }
+  }, [isRecording]);
+
   return (
     <div className="relative px-4 py-6 border-t sm:px-6 sm:py-6 border-slate-700/40 bg-gradient-to-b from-slate-900/80 to-slate-900/95 backdrop-blur-md">
       {/* Enhanced background effect with multiple gradient elements */}

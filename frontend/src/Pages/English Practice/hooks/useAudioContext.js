@@ -5,14 +5,12 @@ export const useAudioContext = () => {
   
   const initAudioContext = useCallback(async () => {
     try {
-      // Only create the AudioContext if it doesn't exist
       if (!audioContext.current) {
         audioContext.current = new (window.AudioContext ||
           window.webkitAudioContext)();
         console.log("AudioContext created with state:", audioContext.current.state);
       }
       
-      // Try to resume the context if it's suspended
       if (audioContext.current.state === "suspended") {
         console.log("Attempting to resume suspended AudioContext");
         await audioContext.current.resume();
