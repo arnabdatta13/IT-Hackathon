@@ -16,34 +16,7 @@ import { FaTrophy } from "react-icons/fa";
 import Toastify from "toastify-js";
 import "toastify-js/src/toastify.css";
 
-// Custom scrollbar styles
-const scrollbarStyles = `
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.3);
-    border-radius: 10px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(45, 212, 191, 0.5);
-    border-radius: 10px;
-  }
-  
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(45, 212, 191, 0.7);
-  }
 
-  @media (max-width: 640px) {
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-  }
-`;
 
 const ChatBot = () => {
   const [input, setInput] = useState("");
@@ -58,7 +31,7 @@ const ChatBot = () => {
   const audioChunksRef = useRef([]);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
-
+  const botMessageBuffer = useRef(''); // Used to hold bot fragments
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -205,74 +178,95 @@ const ChatBot = () => {
     }
   };
 
-  const handleSend = () => {
-    const trimmed = input.trim();
-    if (trimmed !== "") {
-      const userMessage = { type: "text", content: trimmed, from: "user" };
-      setMessages((prev) => [...prev, userMessage]);
-      setInput("");
+  
+const socketRef = useRef(null);
 
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
+useEffect(() => {
+  const socket = new WebSocket('wss://d496-103-142-192-1.ngrok-free.app/ws/chat/');
+  socketRef.current = socket;
 
-      // Simulate bot response
-      setTimeout(() => {
-        let botReply;
+  socket.onopen = () => {
+    console.log('WebSocket connected');
+  };
 
-        if (
-          trimmed.toLowerCase().includes("পদার্থবিজ্ঞান") ||
-          selectedSubject === "physics"
-        ) {
-          botReply = {
-            type: "text",
-            content:
-              "পদার্থবিজ্ঞানের যেকোনো প্রশ্ন জিজ্ঞাসা করুন। আমি আপনাকে সহজভাবে বুঝিয়ে দেব।",
-            from: "bot",
-          };
-        } else if (
-          trimmed.toLowerCase().includes("রসায়ন") ||
-          selectedSubject === "chemistry"
-        ) {
-          botReply = {
-            type: "text",
-            content:
-              "রসায়ন বিষয়ে আপনার প্রশ্ন কি? আমি সহজ ভাষায় ব্যাখ্যা করব।",
-            from: "bot",
-          };
-        } else if (
-          trimmed.toLowerCase().includes("জীববিজ্ঞান") ||
-          selectedSubject === "biology"
-        ) {
-          botReply = {
-            type: "text",
-            content: "জীববিজ্ঞানের যেকোনো জটিল বিষয় সম্পর্কে জিজ্ঞাসা করুন।",
-            from: "bot",
-          };
-        } else if (
-          trimmed.toLowerCase().includes("গণিত") ||
-          selectedSubject === "math"
-        ) {
-          botReply = {
-            type: "text",
-            content:
-              "গণিতের সমস্যা সমাধানে আমি সাহায্য করতে পারি। আপনার প্রশ্ন জিজ্ঞাসা করুন।",
-            from: "bot",
-          };
-        } else {
-          botReply = {
-            type: "text",
-            content:
-              "আপনি কোন বিষয়ে জানতে চান? পদার্থবিজ্ঞান, রসায়ন, জীববিজ্ঞান, নাকি গণিত?",
-            from: "bot",
-          };
-        }
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
 
-        setMessages((prev) => [...prev, botReply]);
-      }, 500);
+    if (data.type === "output") {
+      // Accumulate bot message
+      botMessageBuffer.current += data.value;
+    } else if (data.type === "end") {
+      // When message is complete, push it
+      const finalMessage = {
+        from: "bot",
+        type: "text",
+        content: botMessageBuffer.current,
+      };
+      setMessages((prev) => [...prev, finalMessage]);
+      botMessageBuffer.current = ''; // Reset after pushing
     }
   };
+
+  socket.onclose = () => {
+    console.log('WebSocket disconnected');
+  };
+
+  socket.onerror = (err) => {
+    console.error('WebSocket error:', err);
+  };
+
+  return () => {
+    socket.close();
+  };
+}, []);
+
+
+
+const sendMessage = (text) => {
+  if (!text.trim()) return;
+
+  const userMessage = {
+    from: "user",
+    type: "text",
+    content: text,
+  };
+
+  setMessages((prev) => [...prev, userMessage]);
+
+  if (socketRef.current?.readyState === WebSocket.OPEN) {
+    socketRef.current.send(JSON.stringify({ message: text }));
+  } else {
+    console.error('WebSocket is not open');
+  }
+};
+
+
+
+
+const handleSend = () => {
+  if (!input.trim()) return;
+
+  const message = { type: "input", value: input.trim() };
+
+  // Show user message
+  setMessages((prevMessages) => [
+    ...prevMessages,
+    { from: "user", type: "text", content: input.trim() },
+  ]);
+
+  // Send to WebSocket
+  if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+    socketRef.current.send(JSON.stringify(message));
+  } else {
+    console.warn("WebSocket is not open");
+  }
+
+  setInput("");
+};
+
+
+
+
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -362,9 +356,7 @@ const ChatBot = () => {
   }
   return (
     <>
-      <style>
-        {scrollbarStyles}
-      </style>
+      
       <div className="min-h-screen bg-gradient-to-br from-[#1a2e4c] to-[#0f172a]">
         <div className="container flex flex-col h-screen max-w-4xl px-2 mx-auto sm:px-4">
           {/* Mobile Menu Button */}

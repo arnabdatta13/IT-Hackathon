@@ -263,5 +263,5 @@ function ChatBotHome() {
   );
 }
 
-// Make sure this line is present and there are no syntax errors above it
+
 export default ChatBotHome;
