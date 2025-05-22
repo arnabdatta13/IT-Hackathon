@@ -10,7 +10,7 @@ import logoImage from "../assets/images/logo.png"
 export default function AuthPage() {
     const location = useLocation()
     const navigate = useNavigate()
-    const { user, signIn, signUp, signInWithProvider, signInWithGoogle } = useAuth()
+    const { user, signIn, signUp, signInWithProvider, signInWithOAuth } = useAuth()
   
     useEffect(() => {
       if (user) {
@@ -100,7 +100,7 @@ export default function AuthPage() {
       try {
         setIsLoading(true)
         setError(null)
-        await signInWithGoogle()
+        await signInWithOAuth("google")
         // Redirect will happen automatically via the OAuth flow
       } catch (error) {
         console.error("Google login error:", error.message)
@@ -136,20 +136,20 @@ export default function AuthPage() {
   
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a192f] to-[#164e63] flex flex-col items-center justify-center p-4">
-        <div className="fixed top-0 inset-0 pointer-events-none">
+        <div className="fixed inset-0 top-0 pointer-events-none">
           <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl"></div>
           <div className="absolute top-[30%] -left-40 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-3xl"></div>
         </div>
   
-        <a href="/" className="absolute top-6 left-6 text-white hover:text-teal-400 flex items-center gap-2 z-10">
-          <ArrowLeft className="h-5 w-5" />
+        <a href="/" className="absolute z-10 flex items-center gap-2 text-white top-6 left-6 hover:text-teal-400">
+          <ArrowLeft className="w-5 h-5" />
           <span>Back to Home</span>
         </a>
   
-        <div className="w-full max-w-md relative z-10">
+        <div className="relative z-10 w-full max-w-md">
           <div className="flex justify-center mb-8">
             {/* <div className="flex items-center gap-2">
-              <img src={logoImage} alt="OpenLearn Logo" className="h-8 w-auto" />
+              <img src={logoImage} alt="OpenLearn Logo" className="w-auto h-8" />
             </div> */}
           </div>
   
@@ -190,8 +190,8 @@ export default function AuthPage() {
   
               {/* Error display */}
               {error && (
-                <div className="bg-red-500/20 border border-red-500/50 text-white p-3 rounded-md mt-4 flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <div className="flex items-center gap-2 p-3 mt-4 text-white border rounded-md bg-red-500/20 border-red-500/50">
+                  <AlertCircle className="flex-shrink-0 w-5 h-5" />
                   <span>{error}</span>
                 </div>
               )}
@@ -208,12 +208,12 @@ export default function AuthPage() {
                   >
                     <div className="p-6 border-b border-gray-700/50">
                       <div className="flex flex-col items-center mb-6">
-                        <img src={logoImage} alt="OpenLearn Logo" className="h-16 w-auto mb-4" />
+                        <img src={logoImage} alt="OpenLearn Logo" className="w-auto h-16 mb-4" />
                       </div>
                       <motion.h2 variants={itemVariants} className="text-2xl font-bold">
                         Welcome back
                       </motion.h2>
-                      <motion.p variants={itemVariants} className="text-gray-400 mt-2">
+                      <motion.p variants={itemVariants} className="mt-2 text-gray-400">
                         Enter your credentials to access your account
                       </motion.p>
                     </div>
@@ -261,7 +261,7 @@ export default function AuthPage() {
                                 className="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors"
                                 aria-label={showPassword ? "Hide password" : "Show password"}
                               >
-                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                               </button>
                             </div>
                           </motion.div>
@@ -282,7 +282,7 @@ export default function AuthPage() {
                             </div>
                             <a
                               href="/auth/forgot-password"
-                              className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
+                              className="text-sm text-teal-400 transition-colors hover:text-teal-300"
                             >
                               Forgot password?
                             </a>
@@ -299,7 +299,7 @@ export default function AuthPage() {
                         >
                           {isSubmitting ? (
                             <svg
-                              className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                              className="w-5 h-5 mr-2 -ml-1 text-white animate-spin"
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
                               viewBox="0 0 24 24"
@@ -373,12 +373,12 @@ export default function AuthPage() {
                   >
                     <div className="p-6 border-b border-gray-700/50">
                       <div className="flex flex-col items-center mb-6">
-                        <img src={logoImage} alt="OpenLearn Logo" className="h-16 w-auto mb-4" />
+                        <img src={logoImage} alt="OpenLearn Logo" className="w-auto h-16 mb-4" />
                       </div>
                       <motion.h2 variants={itemVariants} className="text-2xl font-bold">
                         Create an account
                       </motion.h2>
-                      <motion.p variants={itemVariants} className="text-gray-400 mt-2">
+                      <motion.p variants={itemVariants} className="mt-2 text-gray-400">
                         Enter your details to create your account
                       </motion.p>
                     </div>
@@ -460,7 +460,7 @@ export default function AuthPage() {
                                 className="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors"
                                 aria-label={showPassword ? "Hide password" : "Show password"}
                               >
-                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                               </button>
                             </div>
                           </motion.div>
@@ -496,7 +496,7 @@ export default function AuthPage() {
                             />
                             <label htmlFor="agreeToTerms" className="text-sm">
                               I agree to the{" "}
-                              <a href="#" className="text-teal-400 hover:text-teal-300 underline transition-colors">
+                              <a href="#" className="text-teal-400 underline transition-colors hover:text-teal-300">
                                 terms and conditions
                               </a>
                             </label>
@@ -513,7 +513,7 @@ export default function AuthPage() {
                         >
                           {isSubmitting ? (
                             <svg
-                              className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                              className="w-5 h-5 mr-2 -ml-1 text-white animate-spin"
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
                               viewBox="0 0 24 24"
@@ -628,4 +628,3 @@ export default function AuthPage() {
       </div>
     )
   }
-  

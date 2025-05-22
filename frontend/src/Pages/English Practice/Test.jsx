@@ -1,12 +1,12 @@
 import React from "react";
-import { useSpeechSynthesis } from "react-speech-kit";
+import { useSpeech } from "../../hooks/useSpeech";
 
 const TestTTS = () => {
-  const { speak, voices } = useSpeechSynthesis();
+  const { speak, voices } = useSpeech();
 
   const sayHi = () => {
-    const voice = voices.find(v => v.lang === "en-US");
-    speak({ text: "Hello from speech kit!", voice });
+    const voice = voices.find((v) => v.lang === "en-US");
+    speak({ text: "Hello from speech API!", voice });
   };
 
   return <button onClick={sayHi}>Speak</button>;

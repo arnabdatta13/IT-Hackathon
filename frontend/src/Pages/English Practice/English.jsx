@@ -8,7 +8,7 @@ import { AudioContext } from "./context/AudioContext";
 import { useAudioContext } from "./hooks/useAudioContext";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useAudioProcessor } from "./hooks/useAudioProcessor";
-import { useSpeechSynthesis } from "react-speech-kit";
+import { useSpeech } from "../../hooks/useSpeech";
 
 // Loader component
 const Loader = () => (
@@ -51,7 +51,7 @@ export const English = ({ user }) => {
     setIsAITyping
   );
 
-  const { speak, voices } = useSpeechSynthesis();
+  const { speak, voices, cancel } = useSpeech();
 
   const handleTextMessage = (message) => {
     // Just pass through to the original handler
