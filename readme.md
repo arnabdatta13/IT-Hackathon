@@ -13,9 +13,6 @@
   Practice spoken English with a voice-based AI teacher that helps you improve fluency, pronunciation, and vocabulary.
 
 
-- 🧲 **Interactive Periodic Table**  
-  Click any element to view a **Bohr-Rutherford atomic model**, with electrons orbiting in real time around the nucleus.
-
 - 🧩 **Gamified Learning Experience**  
   Earn rewards and track your learning progress through levels and achievements.
 
