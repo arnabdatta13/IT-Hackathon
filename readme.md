@@ -63,7 +63,7 @@ Here’s how OpenLearn is structured behind the scenes:
 ## 🌐 Live Demo
 
 Try OpenLearn here:  
-🔗 [https://openlearn.pages.dev/](https://openlearn.pages.dev/)
+🔗 [https://openlearn.pages.dev//](https://openlearn.pages.dev/)
 
 ---
 
