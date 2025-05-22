@@ -12,8 +12,6 @@
 - 💬 **English Speaking Practice**  
   Practice spoken English with a voice-based AI teacher that helps you improve fluency, pronunciation, and vocabulary.
 
-- 🧪 **Digital Science Lab**  
-  Simulate real-world science experiments and concepts with interactive animations and models.
 
 - 🧲 **Interactive Periodic Table**  
   Click any element to view a **Bohr-Rutherford atomic model**, with electrons orbiting in real time around the nucleus.
@@ -34,7 +32,7 @@
 OpenLearn stands out by offering:
 
 - Voice-based AI teaching for science subjects
-- Real-time interactive tools like digital labs and atomic simulations
+- Real-time interactive tools like atomic simulations
 - Multisensory learning that combines visuals, voice, and gamification
 - Personalized learning without expensive tutors
 
@@ -58,14 +56,14 @@ Here’s how OpenLearn is structured behind the scenes:
 ## 📺 Demo Video
 
 ▶️ Watch the platform in action:  
-[![OpenLearn Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[![OpenLearn Demo](https://img.youtube.com/vi/HpaGVI8ubac/0.jpg)](https://www.youtube.com/watch?v=HpaGVI8ubac)
 
 ---
 
 ## 🌐 Live Demo
 
 Try OpenLearn here:  
-🔗 [https://openlearn.example.com](https://openlearn.example.com)
+🔗 [https://openlearn.pages.dev/](https://openlearn.pages.dev/)
 
 ---
 
@@ -79,7 +77,7 @@ Try OpenLearn here:
 | AI & Voice   | OpenAI, Whisper, Coqui TTS       |
 | Animation    | Three.js, D3.js (for simulations)|
 | Database     | PostgreSQL                       |
-| Hosting      | Vast.ai, Vercel, Heroku, AWS     |
+| Hosting      | Linode,Netlify    |
 
 ---
 
@@ -92,7 +90,10 @@ cd OpenLearn
 # Setup Frontend
 cd frontend
 npm install
-
+npm run dev
 # Setup Backend
 cd ../backend
+cd ITHackathon
 pip install -r requirements.txt
+
+python3.11 -m daphne -b 0.0.0.0 -p 8000 ITHackathon.asgi:application
