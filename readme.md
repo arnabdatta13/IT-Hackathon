@@ -86,7 +86,7 @@ Try OpenLearn here:
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/your-username/OpenLearn.git
+git clone https://github.com/arnabdatta13/OpenLearn.git
 cd OpenLearn
 
 # Setup Frontend
