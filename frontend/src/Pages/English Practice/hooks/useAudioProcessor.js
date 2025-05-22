@@ -15,57 +15,43 @@ export const useAudioProcessor = (
 
   const startRecording = useCallback(async () => {
     try {
-      if (!audioContext.current) {
-        console.error("AudioContext not initialized");
-        return false;
+      if (audioContext.current?.state === "suspended") {
+        await audioContext.current.resume();
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      setIsRecording(true);
       mediaRecorder.current = new MediaRecorder(stream);
       audioChunks.current = [];
 
       mediaRecorder.current.ondataavailable = (e) => {
-        audioChunks.current.push(e.data);
+        if (e.data.size > 0) {
+          audioChunks.current.push(e.data);
+        }
       };
 
       mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
-        sendAudioBlob(audioBlob);
+        console.log("MediaRecorder stopped");
+        if (audioChunks.current.length > 0) {
+          const audioBlob = new Blob(audioChunks.current, {
+            type: "audio/wav",
+          });
+          await sendAudioBlob(audioBlob);
+        }
         audioChunks.current = [];
-        stream.getTracks().forEach((track) => track.stop());
       };
 
-      mediaRecorder.current.start();
-      setIsRecording(true);
+      mediaRecorder.current.onstart = () => {
+        currentRecordingId.current = Date.now();
+      };
 
-      const placeholderId = `user_recording_${Date.now()}`;
-
-      currentRecordingId.current = placeholderId;
-
-      return true;
+      mediaRecorder.current.start(500);
     } catch (err) {
       console.error("Recording failed:", err);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          id: Date.now(),
-          text: "Could not access your microphone. Please check permissions and try again.",
-          sender: "system",
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ]);
-      return false;
+      setIsRecording(false);
     }
-  }, [
-    audioContext,
-    setIsRecording,
-    sendAudioBlob,
-    currentRecordingId,
-    setMessages,
-  ]);
+  }, [audioContext, setIsRecording, sendAudioBlob, currentRecordingId]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorder.current?.state === "recording") {

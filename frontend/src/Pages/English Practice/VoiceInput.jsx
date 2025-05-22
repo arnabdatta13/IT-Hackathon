@@ -23,17 +23,33 @@ const VoiceInput = ({
     recognitionRef.current.continuous = true;
 
     recognitionRef.current.onresult = (event) => {
-      const lastResult = event.results[event.results.length - 1];
-      const transcript = lastResult[0].transcript;
+      try {
+        const lastResult = event.results[event.results.length - 1];
+        const transcript = lastResult[0].transcript;
+        console.log(
+          "Recognition result:",
+          transcript,
+          "isFinal:",
+          lastResult.isFinal
+        );
 
-      if (lastResult.isFinal) {
-        finalTranscriptRef.current = transcript;
-        transcriptRef.current = transcript;
-        if (onTranscript) onTranscript(transcript, true);
-      } else {
-        transcriptRef.current = transcript;
-        if (onTranscript) onTranscript(transcript, false);
+        if (lastResult.isFinal) {
+          finalTranscriptRef.current = transcript;
+          transcriptRef.current = transcript;
+          console.log("Final transcript:", transcript);
+          if (onTranscript) onTranscript(transcript, true);
+        } else {
+          transcriptRef.current = transcript;
+          console.log("Interim transcript:", transcript);
+          if (onTranscript) onTranscript(transcript, false);
+        }
+      } catch (e) {
+        console.error("Error processing speech result:", e);
       }
+    };
+
+    recognitionRef.current.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
     };
 
     recognitionRef.current.onend = () => {
@@ -48,25 +64,38 @@ const VoiceInput = ({
   }, [isRecording]);
 
   useEffect(() => {
-    if (isRecording && recognitionRef.current) {
-      transcriptRef.current = "";
-      finalTranscriptRef.current = "";
-      try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.log("Recognition already started");
-      }
-    } else if (!isRecording && recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-  }, [isRecording]);
-
-  useEffect(() => {
     if (isRecording) {
       // Force stop all speech synthesis when recording starts
       window.speechSynthesis.cancel();
+
+      if (recognitionRef.current) {
+        try {
+          // Clear any old transcript
+          transcriptRef.current = "";
+          finalTranscriptRef.current = "";
+
+          // Start speech recognition
+          recognitionRef.current.start();
+          console.log("Recognition started");
+        } catch (e) {
+          console.log("Recognition already started");
+        }
+      }
+    } else if (!isRecording && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+        console.log("Recognition stopped");
+        // Always send the final transcript if we have one
+        if (transcriptRef.current && onTranscript) {
+          console.log("[VoiceInput] Sending final transcript on stop:", transcriptRef.current);
+          onTranscript(transcriptRef.current, true);
+          transcriptRef.current = ""; // Clear after sending
+        }
+      } catch (e) {
+        console.log("Error stopping recognition:", e);
+      }
     }
-  }, [isRecording]);
+  }, [isRecording, onTranscript]);
 
   return (
     <div className="relative px-4 py-6 border-t sm:px-6 sm:py-6 border-slate-700/40 bg-gradient-to-b from-slate-900/80 to-slate-900/95 backdrop-blur-md">

@@ -59,6 +59,7 @@ export const English = ({ user }) => {
     setIsRecording,
     setIsAudioPlaying,
     async (blob) => {
+      console.log("Audio blob received, sending to server");
       setIsAITyping(true);
       await sendAudioBlob(blob);
     },
@@ -103,11 +104,14 @@ export const English = ({ user }) => {
 
   const handleTranscript = (text, isFinal) => {
     const cleanedText = text.trim();
+    console.log(
+      `[DEBUG] handleTranscript called: text="${cleanedText}", isFinal=${isFinal}`
+    );
 
     if (isFinal) {
       setPendingTranscript("");
-
       if (cleanedText) {
+        console.log("[DEBUG] Adding user message to chat:", cleanedText);
         setMessages((prevMessages) => {
           const newMessage = {
             id: Date.now() + Math.random(),
@@ -118,11 +122,12 @@ export const English = ({ user }) => {
               minute: "2-digit",
             }),
           };
-          return [...prevMessages, newMessage];
+          const updated = [...prevMessages, newMessage];
+          console.log("[DEBUG] Updated messages:", updated);
+          return updated;
         });
       }
     } else {
-      // Interim results - show live transcription
       setPendingTranscript(cleanedText || "");
     }
   };
@@ -141,12 +146,12 @@ export const English = ({ user }) => {
 
   const handleRecordStart = async () => {
     if (isAudioPlaying) return;
-    
+
     // Reset played messages tracking when starting a new recording
     if (window.globalAudioState && window.globalAudioState.playedMessages) {
       window.globalAudioState.playedMessages.clear();
     }
-    
+
     await startRecording();
   };
 

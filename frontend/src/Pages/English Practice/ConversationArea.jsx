@@ -32,9 +32,10 @@ const ConversationArea = ({
             Your conversation will appear here
           </div>
         )}
-        {messages.map((msg) => (
-          <Message key={msg.id} {...msg} isRecording={isRecording} />
-        ))}
+        {messages.map((msg) => {
+          console.log("Rendering message:", msg);
+          return <Message key={msg.id} {...msg} isRecording={isRecording} />;
+        })}
         {showPending && (
           <div className="flex justify-end my-3 animate-fadeIn sm:my-4">
             <div className="p-3.5 sm:p-4 rounded-2xl shadow-lg prose prose-sm prose-invert max-w-[80%] sm:max-w-[75%] md:max-w-[70%] border bg-gradient-to-r from-sky-500 to-fuchsia-600 text-white rounded-br-none border-sky-400/30 opacity-80 flex items-center gap-2">

@@ -80,21 +80,21 @@ export const useWebSocket = (
         switch (msg.type) {
           case "output":
             addMessage(msg.output, "ai");
-            
+
             // Automatically play text using speech synthesis
             const synth = window.speechSynthesis;
             synth.cancel(); // Cancel any ongoing speech
-            
+
             const utterance = new SpeechSynthesisUtterance(msg.output);
             const voices = synth.getVoices();
-            const femaleVoice = voices.find(voice => 
-              voice.lang === "en-US" && voice.name.includes("Female")
+            const femaleVoice = voices.find(
+              (voice) => voice.lang === "en-US" && voice.name.includes("Female")
             );
             utterance.voice = femaleVoice || voices[0];
             utterance.rate = 1;
             utterance.pitch = 1;
             synth.speak(utterance);
-            
+
             // Request audio for the AI message
             if (ws.current?.readyState === WebSocket.OPEN) {
               ws.current.send(
@@ -105,33 +105,13 @@ export const useWebSocket = (
               );
             }
             break;
+
+          // Simply log the transcript message but don't modify the UI
+          // The transcript is handled by the VoiceInput component
           case "transcript":
-            if (msg.transcript && msg.transcript.trim() !== "") {
-              setMessages((prevMessages) =>
-                prevMessages.map((m) => {
-                  if (m.id === currentRecordingId.current) {
-                    return { ...m, text: msg.transcript };
-                  }
-                  return m;
-                })
-              );
-            } else {
-              setMessages((prevMessages) => {
-                const hasPlaceholder = prevMessages.some(
-                  (m) => m.id === currentRecordingId.current
-                );
-                if (hasPlaceholder) {
-                  return prevMessages.map((m) => {
-                    if (m.id === currentRecordingId.current) {
-                      return { ...m, text: "I spoke to you just now." };
-                    }
-                    return m;
-                  });
-                }
-                return prevMessages;
-              });
-            }
+            console.log("Received transcript:", msg.transcript);
             break;
+
           case "audio":
             if (msg.audio_data) {
               const audioData = atob(msg.audio_data);
