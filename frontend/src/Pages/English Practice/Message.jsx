@@ -36,14 +36,32 @@ const Message = ({ text, sender, time, isRecording, id }) => {
   // Let the WebSocket handle auto-play
   // Don't try to auto-play in this component
 
-  // Make sure audio stops when unmounting
+  // Make sure audio stops when unmounting or when page visibility changes
   useEffect(() => {
+    // Handle page visibility change
+    const handleVisibilityChange = () => {
+      if (document.hidden && isPlaying) {
+        stopAudio();
+      }
+    };
+
+    // Add event listener for page visibility
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup function
     return () => {
+      // Remove event listener
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Cancel any ongoing speech synthesis
       if (utteranceRef.current) {
         synthRef.current.cancel();
       }
+      
+      // Update global state
+      globalAudioState.isPlaying = false;
     };
-  }, []);
+  }, [isPlaying]);
 
   const generateAudio = (text) => {
     // Ensure any existing audio is stopped
@@ -100,7 +118,7 @@ const Message = ({ text, sender, time, isRecording, id }) => {
   if (isSystem) {
     return (
       <div className="flex justify-center my-2 animate-fadeIn">
-        <div className="max-w-[80%] sm:max-w-[75%] p-3 sm:p-3.5 my-1 rounded-xl shadow-md bg-gradient-to-r from-amber-600/90 to-amber-700/90 text-white text-xs sm:text-sm text-center border border-amber-500/30 backdrop-blur-sm">
+        <div className="max-w-[80%] sm:max-w-[75%] p-3 sm:p-3.5 my-1 rounded-xl shadow-md bg-gradient-to-r from-teal-600/90 to-teal-700/90 text-white text-xs sm:text-sm text-center border border-teal-500/30 backdrop-blur-sm">
           {text}
         </div>
       </div>
@@ -115,7 +133,7 @@ const Message = ({ text, sender, time, isRecording, id }) => {
     >
       {!isUser && (
         <div className="flex-shrink-0 w-9 h-9 mr-2.5 sm:w-10 sm:h-10 self-end mb-1">
-          <div className="flex items-center justify-center w-full h-full text-white transition-all duration-300 border shadow-lg rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 border-indigo-400/30">
+          <div className="flex items-center justify-center w-full h-full text-white transition-all duration-300 border shadow-lg rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 border-teal-400/30">
             <BotIcon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         </div>
@@ -129,9 +147,9 @@ const Message = ({ text, sender, time, isRecording, id }) => {
           ${!isUser ? "cursor-pointer hover:shadow-xl" : ""} 
           ${
             isUser
-              ? "bg-gradient-to-r from-sky-500 to-fuchsia-600 text-white rounded-br-none border-sky-400/30"
-              : `bg-slate-800/90 backdrop-blur-sm text-slate-100 rounded-bl-none border-blue-500/30 ${
-                  isHovered ? "shadow-lg shadow-blue-500/10" : ""
+              ? "bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-br-none border-teal-400/30"
+              : `bg-[#0a192f]/90 backdrop-blur-sm text-slate-100 rounded-bl-none border-teal-500/30 ${
+                  isHovered ? "shadow-lg shadow-teal-500/10" : ""
                 }`
           }`}
       >
@@ -142,7 +160,7 @@ const Message = ({ text, sender, time, isRecording, id }) => {
 
         <div
           className={`text-xs font-medium mt-3 text-right flex items-center justify-end gap-1 ${
-            isUser ? "text-sky-100/90" : "text-blue-300/80"
+            isUser ? "text-teal-100/90" : "text-teal-300/80"
           }`}
         >
           <span className="opacity-80">{time}</span>

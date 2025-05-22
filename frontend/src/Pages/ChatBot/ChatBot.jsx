@@ -182,7 +182,7 @@ const ChatBot = () => {
 const socketRef = useRef(null);
 
 useEffect(() => {
-  const socket = new WebSocket('wss://d496-103-142-192-1.ngrok-free.app/ws/chat/');
+  const socket = new WebSocket('ws://194.195.119.244/ws/chat/');
   socketRef.current = socket;
 
   socket.onopen = () => {
@@ -341,7 +341,7 @@ const handleSend = () => {
   // Show loading screen before the actual chat
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center p-4 h-screen text-white bg-gradient-to-br from-[#1a2e4c] to-[#0f172a]">
+      <div className="flex flex-col justify-center items-center p-4 h-screen pt-16 text-white bg-gradient-to-br from-[#1a2e4c] to-[#0f172a]">
         <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32">
           <div className="absolute w-full h-full border-4 border-teal-500 rounded-full animate-spin border-t-transparent"></div>
           <div className="absolute w-3/4 border-4 border-teal-400 rounded-full h-3/4 animate-spin border-t-transparent animation-delay-200"></div>
@@ -357,7 +357,7 @@ const handleSend = () => {
   return (
     <>
       
-      <div className="min-h-screen bg-gradient-to-br from-[#1a2e4c] to-[#0f172a]">
+      <div className="min-h-screen bg-gradient-to-br from-[#1a2e4c] to-[#0f172a] pt-16">
         <div className="container flex flex-col h-screen max-w-4xl px-2 mx-auto sm:px-4">
           {/* Mobile Menu Button */}
           {messages.length > 0 && (

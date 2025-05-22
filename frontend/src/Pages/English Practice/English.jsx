@@ -1,13 +1,24 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import StartScreen from "./StartScreen";
 import ConversationArea from "./ConversationArea";
 import VoiceInput from "./VoiceInput";
 import { ChatBubbleIcon } from "./Icons";
+import { AudioContext } from "./context/AudioContext";
 import { useAudioContext } from "./hooks/useAudioContext";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useAudioProcessor } from "./hooks/useAudioProcessor";
-import { useSpeechSynthesis } from "react-speech-kit";
+import { useSpeech } from "../../hooks/useSpeech";
+
+// Loader component
+const Loader = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a192f]/80 backdrop-blur-sm">
+    <div className="flex flex-col items-center">
+      <div className="w-16 h-16 border-4 border-t-transparent border-teal-500 rounded-full animate-spin"></div>
+      <p className="mt-4 text-lg font-medium text-teal-400">Loading...</p>
+    </div>
+  </div>
+);
 
 export const English = ({ user }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -16,7 +27,7 @@ export const English = ({ user }) => {
   const [sessionActive, setSessionActive] = useState(false);
   const [isAITyping, setIsAITyping] = useState(false);
   const [pendingTranscript, setPendingTranscript] = useState("");
-
+  const [isLoading, setIsLoading] = useState(true);
   const conversationEndRef = useRef(null);
   const currentRecordingId = useRef(null);
   const navigate = useNavigate();
@@ -40,7 +51,7 @@ export const English = ({ user }) => {
     setIsAITyping
   );
 
-  const { speak, voices } = useSpeechSynthesis();
+  const { speak, voices, cancel } = useSpeech();
 
   const handleTextMessage = (message) => {
     // Just pass through to the original handler
@@ -66,7 +77,8 @@ export const English = ({ user }) => {
     currentRecordingId,
     setMessages
   );
-
+  const audioCtx = useContext(AudioContext);
+  const stopAllAudio = audioCtx?.stopAllAudio;
   useEffect(() => {
     if (sessionActive) {
       connectWebSocket(handleTextMessage, handleAudioMessage);
@@ -102,6 +114,23 @@ export const English = ({ user }) => {
     }
   }, [messages, pendingTranscript]);
 
+  useEffect(() => {
+    // Simulate loading time
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+
+    // Stop all audio when component unmounts
+    return () => {
+      clearTimeout(loadingTimer);
+      if (stopAllAudio) {
+        stopAllAudio();
+      } else {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [stopAllAudio]);
+
   const handleTranscript = (text, isFinal) => {
     const cleanedText = text.trim();
     console.log(
@@ -133,14 +162,34 @@ export const English = ({ user }) => {
   };
 
   const handleStartSession = async () => {
-    await initAudioContext();
     setSessionActive(true);
+    // Add initial message
+    setMessages([
+      {
+        id: "system-welcome",
+        sender: "system",
+        text: "Welcome to English Practice! Start speaking to practice your English skills.",
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ]);
   };
 
   const handleSessionEnd = () => {
-    sendWebSocketMessage({ type: "end_conversation" });
+    // Stop any playing audio using the AudioContext
+    if (stopAllAudio) {
+      stopAllAudio();
+    } else {
+      window.speechSynthesis.cancel();
+    }
+
+    // Logic to end session
     setSessionActive(false);
+    // Reset messages or perform any cleanup
     setMessages([]);
+    // Redirect to landing page
     navigate("/english");
   };
 
@@ -156,16 +205,17 @@ export const English = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen font-sans bg-gradient-to-br from-indigo-950 via-slate-900 to-neutral-950">
-      <div className="flex flex-col h-screen overflow-hidden bg-slate-800/60 backdrop-blur-2xl border-slate-700/50">
-        <header className="flex items-center justify-between flex-shrink-0 p-3.5 border-b sm:p-4 bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/30">
+    <div className="min-h-screen font-sans bg-gradient-to-br from-[#0a192f] to-[#164e63] text-white">
+      {isLoading && <Loader />}
+      <div className="flex flex-col h-screen pt-16 overflow-hidden bg-[#0a192f]/60 backdrop-blur-2xl border-gray-700/50">
+        <header className="flex items-center justify-between flex-shrink-0 p-3.5 border-b sm:p-4 bg-gradient-to-b from-[#0a192f]/80 to-[#0a192f]/90 border-gray-700/30">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="flex items-center justify-center w-10 h-10 text-white border rounded-lg shadow-lg bg-gradient-to-tr from-blue-500 to-indigo-600 sm:w-11 sm:h-11 border-blue-400/20">
+            <div className="flex items-center justify-center w-10 h-10 text-white border rounded-lg shadow-lg bg-gradient-to-tr from-teal-500 to-teal-600 sm:w-11 sm:h-11 border-teal-400/20">
               <ChatBubbleIcon />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 sm:text-xl">
-                EngloTeacher
+              <h1 className="text-lg font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-teal-300 sm:text-xl">
+                English Practice
               </h1>
               <p className="text-xs tracking-wide text-slate-400">
                 AI Powered English Speaking Partner
@@ -175,7 +225,7 @@ export const English = ({ user }) => {
           {sessionActive && (
             <button
               onClick={handleSessionEnd}
-              className="px-4 py-2 text-sm font-medium text-red-100 transition-colors rounded-lg bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-800"
+              className="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-[#0a192f]"
             >
               End Session
             </button>

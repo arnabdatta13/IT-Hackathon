@@ -25,6 +25,7 @@ function ChatBotHome() {
         justifyContent: "center",
         minHeight: "100vh",
         padding: "2rem",
+        paddingTop: "5rem", // Added padding-top to fix navbar overlap
         background: "linear-gradient(135deg, #141e30, #243b55)",
         fontFamily: "'Hind Siliguri', 'Segoe UI', sans-serif",
       }}

@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useRef } from "react";
+import React, { createContext, useEffect, useRef, useState } from "react";
 
 export const AudioContext = createContext(null);
 
@@ -7,6 +7,7 @@ export const AudioProvider = ({ children, websocket }) => {
   const sourceNode = useRef(null);
   const audioBufferQueue = useRef([]);
   const isAudioPlaying = useRef(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const initAudioContext = async () => {
     try {
@@ -57,6 +58,29 @@ export const AudioProvider = ({ children, websocket }) => {
     }
   };
 
+  const stopAllAudio = () => {
+    // Clear the audio queue
+    audioBufferQueue.current = [];
+    
+    // Stop currently playing audio
+    if (sourceNode.current) {
+      try {
+        sourceNode.current.stop();
+        sourceNode.current.disconnect();
+      } catch (error) {
+        console.error("Error stopping audio:", error);
+      }
+      sourceNode.current = null;
+    }
+    
+    isAudioPlaying.current = false;
+    
+    // Also stop any speech synthesis
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  };
+  
   const playAudioQueue = () => {
     if (audioBufferQueue.current.length === 0) {
       isAudioPlaying.current = false;
@@ -96,10 +120,32 @@ export const AudioProvider = ({ children, websocket }) => {
   };
 
   useEffect(() => {
+    // Handle page visibility change
+    const handleVisibilityChange = () => {
+      if (document.hidden && isAudioPlaying.current) {
+        stopAllAudio();
+      }
+    };
+
+    // Add event listener for page visibility
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Handle beforeunload event to stop audio when navigating away
+    const handleBeforeUnload = () => {
+      stopAllAudio();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
     return () => {
+      // Remove event listeners
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Clean up audio context
       if (audioContext.current) {
+        stopAllAudio();
         audioContext.current.close();
-        audioContext.current = null;
       }
     };
   }, []);
@@ -107,11 +153,11 @@ export const AudioProvider = ({ children, websocket }) => {
   return (
     <AudioContext.Provider
       value={{
-        initAudioContext,
         processAudioBlob,
-        playAudioQueue,
         requestAudioForText,
-        isPlayingAudio: () => isAudioPlaying.current,
+        stopAllAudio,
+        isAudioEnabled,
+        setIsAudioEnabled,
       }}
     >
       {children}
